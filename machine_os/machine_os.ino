@@ -345,7 +345,7 @@ class AutomaticMove {
         digitalWrite(pinDirX2, left);
     } else if (direction == 'r') {
         xDir = rightFlag;                   // устанавливаем флаг направления "вправо"
-        digitalWrite(pinDirX1, right);      // устанавливае значения пинов направления "вправо"
+        digitalWrite(pinDirX1, right);      // устанавливаем значения пинов направления "вправо"
         digitalWrite(pinDirX2, right);
     } else if (direction == 'f') {
         yDir = forwardFlag;                 // устанавливаем флаг направления "вперед"
@@ -1329,19 +1329,8 @@ class ReferentPoint {
     return rPointG54Z;
   }
 
-  void goToRPoint() {               // метод ведет шпиндель к референтной точке
-    if (rPointG54Z + spacerHeight - changeP.toolLenComp() > zDistance) {     // если инструмент слишком длинный
-      // rPointG54Z: координата Z реф. точки;
-      // spacerHeight: недоход до реф. точки;
-      // changeP.toolLenComp(): поправка на длину инструмента
-      Serial.println("The spindle cannot be moved to the reference point: the tool is too long.");
-      return;
-    } else if (rPointG54Z + spacerHeight - changeP.toolLenComp() < 0) {      // если инструмент слишком короткий
-      Serial.println("The spindle cannot be moved to the reference point: the tool is too short.");
-      return;
-    }
-
-    gSpeed = 0;                                               // декларируем, что перемещения сейчас будут на ускоренном ходу
+  void goToRPoint() {       // метод ведет шпиндель к референтной точке
+    gSpeed = 0;         // декларируем, что перемещения сейчас будут на ускоренном ходу
 
     toRiseSpindle();    // сначала надо поднять шпиндель в самый верх (если референтная точка находится ниже максимальной высоты оси Z)
     goToRPointOnX();    // теперь, когда шпиндель вверху, перемещаемся по оси X до референтной точки (если в этом есть необходимость)
@@ -1420,16 +1409,14 @@ class ReferentPoint {
 
   // метод опускает шпиндель от самой верхней точки оси Z до референтной точки
   void lowerToRPoint() {
-    if (machinePosition.getPositionZ()
-        - spacerHeight
-        + changeP.toolLenComp() > rPointG54Z) {  // определяем, не находимся ли мы в данный момент в референтной точке по оси Z
-      zDir = bottomFlag;                                                        // устанавливаем флаг направления движения "вперед"
-      digitalWrite(pinDirZ, bottom);                                            // устанавливаем значение пина, соответствующее данному направлению
-      while (machinePosition.getPositionZ()
-             - spacerHeight
-             + changeP.toolLenComp() > rPointG54Z) {    // вращаем двигатели до тех пор, пока координаты
-                                                        // референтной точки и текущего положения по данной оси не станут равны.
-        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));              // функция движения по Z на ускоренном ходу
+    // !!!!!!!!!!проверить функцию после удаления из условия функции changeP.toolLenComp()
+    // определяем, не находимся ли мы в данный момент в референтной точке по оси Z
+    if (machinePosition.getPositionZ() - spacerHeight > rPointG54Z) {
+      aMove.setMoveParam(0, 0, 'd');    // инициализируем движение вниз на ускоренном ходу
+      // вращаем двигатели до тех пор, пока координаты
+      // референтной точки и текущего положения по данной оси не станут равны.
+      while (machinePosition.getPositionZ() - spacerHeight > rPointG54Z) {
+        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
       }
       Serial.println("Spindle lowered to RPoint.");
     } else {
