@@ -42,7 +42,7 @@ String fileName = "do_now.ncm";
 #define pinTuneMachine 49       // тумблер выйти в ноль координат станка
 #define pinSetG54 46            // тумблер установить референтную точку G54; ноль заготовки
 #define pinGoToG54 43           // тумблер перейти к референтной точке G54
-#define ToolTouchDetected 39    // пин слушает касание инструментом датчика
+#define ToolTouchDetected 37    // пин слушает касание инструментом датчика
 #define pinSetToolSensor 40     // тумблер задать координаты точки в которой будет происходить смена инструмента
 #define pinAutoSetTool 42       // кнопка автоматически подводит кончик инструмента к датчику касания инструмента
 
@@ -2323,9 +2323,12 @@ void loop() {
     } else if (digitalRead(pinGoToG54)) {
       refPoint.goToRPoint();                // передвигаем шпиндель к референтной точке
     }else if (digitalRead(pinSetToolSensor)) {
+      Serial.println("pressed pinSetToolSensor");
       changeP.setToolSensorPoint();         // начинаем процесс инициализации датчика касания инструмента
     }else if (digitalRead(pinOutRect)) {
       centerFinder.startCenterOutRect();    // начинаем автоматический поиск центра заготовки
+    }else if (!digitalRead(ToolTouchDetected)) {
+      Serial.println("pressed ToolTouchDetected");
     }
   }
 }
