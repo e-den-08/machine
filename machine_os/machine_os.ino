@@ -154,7 +154,10 @@ class SpeedControl {
 //                                                 вычисляем:
     pulsPerMin = (long)pulsPerMm * fSpeed;      // сигналов в минуту
     pulsPerSek = pulsPerMin / 60;               // сигналов в секунду
-
+    Serial.print("fSpeed: ");
+    Serial.println(fSpeed);
+    Serial.print("pulsPerSek: ");
+    Serial.println(pulsPerSek);
     beatDur1Ax = ((1.0 / pulsPerSek) * (long)1000000.0);   // длительность такта при движении только по одной из осей (кроме Z)
     // дальнейшие расчеты строятся от beatDur1Ax, поэтому проверяем, нет ли превышения максимально допустимой скорости для данного станка
     if (beatDur1Ax < maxSpeed) {
@@ -328,10 +331,12 @@ class AutomaticMove {
   // метод устанавливает направление движения, устанавливает пины в нужное состояние
   // ,выставляет необходимые флаги и устанавливает скорость движения
   void setMoveParam(int g, int f, char direction) {
+    Serial.print("f: ");
+    Serial.println(f);
     // g: 1/0
     // f: числовое значение подачи
     // direction: t - вверх, d - вниз
-    if (g == 0) {
+    if (g == 1) {
         gSpeed = 1;                 // устанавливаем движение на подаче
         fSpeed = f;                 // записываем в глобальную переменную значение скорости
         speedSetting.setSpeed();    // рассчитываем параметры железа для этой скорости
@@ -1232,7 +1237,7 @@ class ToolChangePoint {
     // функции это вниз до касания датчика. Записываются все три координаты - это и есть точка сверки длин инструментов
     // После касания инструментом датчика, поднимаем инструмент на пару миллиметров Z
 
-    aMove.setMoveParam(1, 10, 'd');
+    aMove.setMoveParam(1, 100, 'd');
     // датчик работает на размыкание при нажатии: двигаем шпиндель вниз пока не разомкнет контакты ToolTouchDetected
     while (digitalRead(ToolTouchDetected)) {
         // проверяем на выход за нижний предел оси Z
