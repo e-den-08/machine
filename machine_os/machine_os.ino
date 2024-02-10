@@ -42,9 +42,12 @@ String fileName = "do_now.ncm";
 #define pinTuneMachine 49       // тумблер выйти в ноль координат станка
 #define pinSetG54 46            // тумблер установить референтную точку G54; ноль заготовки
 #define pinGoToG54 43           // тумблер перейти к референтной точке G54
+
+// пины смены инструмента
+#define pinGoChangePoint 45     // кнопка идем к точке смены инструмента по X
 #define ToolTouchDetected 37    // пин слушает касание инструментом датчика
 #define pinSetToolSensor 40     // тумблер задать координаты точки в которой будет происходить смена инструмента
-#define pinAutoSetTool 42       // кнопка автоматически подводит кончик инструмента к датчику касания инструмента после мены инструмента
+#define pinAutoSetTool 42       // кнопка продолжить программу после замены инструмента
 
 #define pinStepByStep 28        // тумблеры скоростей на пульте управления
 #define pinFiSpeed 26
@@ -1229,7 +1232,7 @@ class ToolChangePoint {
     // функции это вниз до касания датчика. Записываются все три координаты - это и есть точка сверки длин инструментов
     // После касания инструментом датчика, поднимаем инструмент на пару миллиметров Z
 
-    aMove.setMoveParam(1, 100, 'd');
+    aMove.setMoveParam(1, 10, 'd');
     // датчик работает на размыкание при нажатии: двигаем шпиндель вниз пока не разомкнет контакты ToolTouchDetected
     while (digitalRead(ToolTouchDetected)) {
         // проверяем на выход за нижний предел оси Z
@@ -1258,6 +1261,7 @@ class ToolChangePoint {
     }
     toolLenDif = 0;                         // обнуляем разницу длины инструментов
     Serial.println("Tool touch sensor initialized!");
+    return 0;
   }
 
   // метод опускает шпиндель до касания с датчиком инструмента
@@ -1488,6 +1492,7 @@ void setup() {
   pinMode(pinOutRect, INPUT);           // пин, включает автоматический поиск центра заготовки - прямоугольник, снаружи
   pinMode(pinTouchProbe, INPUT);        // пин, снимает показания с датчика 3D Touch Probe
 
+  pinMode(pinGoChangePoint, INPUT);     // кнопка, идем к точке смены инструмента по X
   pinMode(pinSetToolSensor, INPUT);     // тумблер, запускает процесс инициализации датчика касания инструмента
   pinMode(pinAutoSetTool, INPUT);       // кнопка, продолжает программу после смены инструмента
   pinMode(ToolTouchDetected, INPUT);    // пин слушает касание инструментом датчика
@@ -2390,6 +2395,8 @@ void loop() {
       centerFinder.startCenterOutRect();    // начинаем автоматический поиск центра заготовки
     }else if (!digitalRead(ToolTouchDetected)) {
       Serial.println("pressed ToolTouchDetected");
+    }else if (digitalRead(pinGoChangePoint)) {
+      changeP.goToChangePointX();
     }
   }
 }
