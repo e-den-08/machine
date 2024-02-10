@@ -351,10 +351,10 @@ class AutomaticMove {
         zDir = bottomFlag;                  // устанавливаем флаг направления движения "Вниз"
         digitalWrite(pinDirZ, bottom);      // устанавливаем значение пина, соответствующее данному направлению
     } else if (direction == 't') {
-        zDir = zDir = topFlag;              // устанавливаем флаг направления движения "Вниз"
+        zDir = zDir = topFlag;              // устанавливаем флаг направления движения "Вверх"
         digitalWrite(pinDirZ, top);
     } else if (direction == 'l') {
-        xDir = leftFlag;
+        xDir = leftFlag;                    // устанавливаем флаг направления "влево"
         digitalWrite(pinDirX1, left);       // устанавливаем значение пинов, соответствующее данному направлению
         digitalWrite(pinDirX2, left);
     } else if (direction == 'r') {
@@ -1199,7 +1199,7 @@ class ToolChangePoint {
   int32_t changePointX = 0;             // координаты точки смены инструмента
   int32_t changePointY = 0;
   int32_t changePointZ = 0;
-  int32_t endTool = 0;                  // координаты шпинделя по Z в момент, когда нижняя часть фрезы находится в точке смены инструмента
+  int32_t curToolEnd = 0;       // координаты торца текущего инструмента
   int32_t toolLenDif = 0;               // разница длины нового и предыдущего инструмента
 
   // метод продолжает программу после смены инструмента в середине программы:
@@ -1224,12 +1224,82 @@ class ToolChangePoint {
     // опускает шпиндель до точки начала координат заготовки
     // дальше просто эта функция завершается и .ncm программа продолжается как обычно
   uint8_t continueProgram() {
+    toRiseSpindle();        // поднимаем шпиндель
+    moveAlongTable();        // отодвигаем стол
+    moveXToolChange();    // двигаем шпиндель по X до точки смены инструмента
+    // опускаем шпиндель до касания датчика инструмента
+    if (moveDownUntilToucSensor()) {
+        toRiseSpindle();        // поднимаем шпиндель
+        return GENERAL_ERROR;
+    }
+
+    curToolEnd = machinePosition.getPositionZ();
+    toolLenDif = curToolEnd - changePointZ;
+
+    if ((rPointG54Z + toolLenDif) > zDistance) {
+        Serial.println("Tool is too long");
+        return TOO_LONG_TOOL;
+    } else if ((rPointG54Z + toolLenDif) < 0) {
+        Serial.println("Tool is too short");
+        return TOO_SHORT_TOOL;
+    }
+
+    toRiseSpindle();        // поднимаем шпиндель
+    moveXToG54();       // двигаемся до G54 по всем трем осям
+    moveYToG54();
+    lowerZToG54();
 
     return 0;   // возвращаем успешный код выполнения
   }
 
-  bool toolLenComp() {
-    // сделать эту функцию и посмотреть в каких еще процессах она задействована
+  // опускаем шпиндель до G54
+  void lowerZToG54() {
+    aMove.setMoveParam(0, 0, 'd');  // конфигурируем движение стола вниз на ускоренном
+    while (machinePosition.getPositionZ() > (rPointG54Z + toolLenDif)) {
+        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+    }
+  }
+
+  // двигаем шпиндель по Y до G54
+  void moveYToG54() {
+    aMove.setMoveParam(0, 0, 'f');  // конфигурируем движение стола вперед на ускоренном
+    while (machinePosition.getPositionY() < rPointG54Y) {
+        aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+    }
+  }
+
+  // двигаем шпиндель по X до G54
+  void moveXToG54() {
+    aMove.setMoveParam(0, 0, 'l');  // конфигурируем движение влево ускор.
+    while (machinePosition.getPositionX() > rPointG54X) {
+        aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+    }
+  }
+
+  // двигаем шпиндель по X до точки смены инструмента
+  void moveXToolChange() {
+    // выясняем с какой стороны от точки смены инструмента мы сейчас находимся
+    if (machinePosition.getPositionX() < changePointX) {
+      // мы находимся слева
+      aMove.setMoveParam(0, 0, 'r');  // конфигурируем движение вправо ускор.
+      while (machinePosition.getPositionX() < changePointX) {
+          aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+      }
+    } else if (machinePosition.getPositionX() > changePointX) {
+      // мы находимся справа от точки смены инструмента
+      aMove.setMoveParam(0, 0, 'l');  // конфигурируем движение влево ускор.
+      while (machinePosition.getPositionX() > changePointX) {
+          aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+      }
+    }
+  }
+
+  // отодвигаем стол в крайнее дальнее положение
+  void moveAlongTable() {
+    aMove.setMoveParam(0, 0, 'b');  // конфигурируем движение стола вдаль на ускоренном
+    while (machinePosition.getPositionY() > 0) {
+        aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+    }
   }
 
   // метод устанавливает координаты точки смены инструмента
@@ -1247,12 +1317,7 @@ class ToolChangePoint {
     changePointX = machinePosition.getPositionX();
     changePointY = machinePosition.getPositionY();
     changePointZ = machinePosition.getPositionZ();
-    Serial.print("Tool touch sensor position X: ");
-    Serial.println(changePointX);
-    Serial.print("Tool touch sensor position Y: ");
-    Serial.println(changePointY);
-    Serial.print("Tool touch sensor position Z: ");
-    Serial.println(changePointZ);
+    curToolEnd = machinePosition.getPositionZ();    // записываем координаты торца текущего инструмента
     // теперь приподнимаем инструмент над датчиком на несколько миллиметров
     if (raiseFewMilliveters(2)) {
         return GENERAL_ERROR;
@@ -1294,53 +1359,9 @@ class ToolChangePoint {
 
   // метод поднимает шпиндель в самый верх (если шпиндель уже не находится в самом верху)
   void toRiseSpindle() {
-    if (machinePosition.getPositionZ() < zDistance) {           // если текущее положение шпинделя ниже верхней точки
-      zDir = topFlag;                                             // устанавливаем флаг направления движения "Вверх"
-      digitalWrite(pinDirZ, top);                                 // устанавливаем значение пина, соответствующее данному направлению
-      while (machinePosition.getPositionZ() < zDistance) {        // поднимаем шпиндель пока текущее положение ниже верхней точки рабочего диапазона оси Z
-        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));    // функция движения по Z на ускоренном ходу
-      }
-      Serial.println("Spindle rised.");
-    } else {
-      Serial.println("Spindle already at the highest point.");
-    }
-  }
-
-  // метод отодвигает стол в самую далекую координату, чтобы освободить место для установки новой фрезы
-  void moveAlongTable() {
-    if (machinePosition.getPositionY() > 0) {         // если стол еще не в самой дальней точке (координата самой далекой точки: Y = 0)
-      yDir = backFlag;
-      digitalWrite(pinDirY1, back);
-      digitalWrite(pinDirY2, back);
-      while(machinePosition.getPositionY() > 0) {     // пока текущая позиция по оси Y больше нуля, двигаем стол
-        aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
-      }
-      Serial.println("table moved back");
-    } else {                                          // стол уже в самой дальней точке - двигать уже ничего не надо и мы об этом сообщаем
-      Serial.println("The table does not need to be moved");
-    }
-  }
-
-  // метод перемещает шпиндель до точки смены инструмента по оси X
-  void goToChangePointX() {
-    // выясняем с какой стороны от точки смены инструмента сейчас находится шпиндель и задаем направление движения лево/право
-    if (machinePosition.getPositionX() < changePointX) {              // если шпиндель в данный момент находится слева от точки смены инструмента
-      xDir = rightFlag;                                                 // устанавливаем флаг направления "вправо"
-      digitalWrite(pinDirX1, right);                                    // устанавливае значения пинов направления "вправо"
-      digitalWrite(pinDirX2, right);
-      while(machinePosition.getPositionX() < changePointX) {            // двигаемся вправо пока шпиндель не придет в точку смены инструмента
-        aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-      }
-      Serial.println("Spindle moved to right.");
-    } else if (machinePosition.getPositionX() > changePointX) {         // если шпиндель в данный момент находится справа от точи смены инструмента
-      xDir = leftFlag;                                                  // устанавливаем флаг направления "влево"
-      digitalWrite(pinDirX1, left);                                     // устанавливае значения пинов направления "влево"
-      digitalWrite(pinDirX2, left);
-      while(machinePosition.getPositionX() > changePointX) {            // двигаемся влево пока шпиндель не придет в точку смены инструмента
-        aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-      }
-    } else {                                                            // а если шпиндель уже в точе смены по оси X, просто сообщаем об этом и ничего не делаем
-      Serial.println("Spindle already at the change point on X axis.");
+    aMove.setMoveParam(0, 0, 't');      // конфигурируем движение вверх на ускоренном ходу
+    while (machinePosition.getPositionZ() <= zDistance ) {
+        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
     }
   }
 };
@@ -1440,7 +1461,6 @@ class ReferentPoint {
 
   // метод опускает шпиндель от самой верхней точки оси Z до референтной точки
   void lowerToRPoint() {
-    // !!!проверить функцию после удаления из условия функции changeP.toolLenComp()
     // определяем, не находимся ли мы в данный момент в референтной точке по оси Z
     if (machinePosition.getPositionZ() - spacerHeight > rPointG54Z) {
       aMove.setMoveParam(0, 0, 'd');    // инициализируем движение вниз на ускоренном ходу
@@ -1717,7 +1737,11 @@ void lineParsing() {                // функция парсит строку
             mControl.isOnManual();
             // 4. продолжаем программу после физической замены инструмента
             if (digitalRead(pinAutoSetTool)) {
-              changeP.continueProgram();
+              // продолжаем попытки установить инструмент, пока код выполнения больше нуля.
+              // когда changeP.continueProgram() вернет код выполнения 0, продолжаем программу
+              while (changeP.continueProgram()) {
+                Serial.println("This tool is no good, insert another tool");
+              }
               break;
             }
           }
@@ -2398,7 +2422,15 @@ void loop() {
     }else if (digitalRead(pinOutRect)) {
       centerFinder.startCenterOutRect();    // начинаем автоматический поиск центра заготовки
     }else if (digitalRead(pinGoChangePoint)) {
-      changeP.goToChangePointX();
+      changeP.moveXToolChange();           // переходим к точке смены инструмента по X
+    } else if (digitalRead(pinAutoSetTool)) {
+      // продолжаем попытки установить инструмент, пока код выполнения больше нуля.
+      // когда changeP.continueProgram() вернет код выполнения 0, продолжаем программу
+      while (changeP.continueProgram()) {
+        Serial.println("This tool is no good, insert another tool");
+      }
+      Serial.println("tool installed!");
+      break;
     }
   }
 }
