@@ -112,6 +112,9 @@ char tempNumChar[9];                     // массив для хранения
 
 uint32_t frameCounter = 0;              // счетчик выполненных к данному моменту кадров. Выводится на компьютер для визуального контроля прогресса обработки
 
+// коды ошибок:
+const uint8_t OVER_LOW_LIMIT = 1;       // шпиндель заходит за нижнюю границу по оси Z
+
 // описываем классы:
 
 
@@ -1203,7 +1206,7 @@ class ToolChangePoint {
     // вычисляем разницу длины предыдущего и нынешнего инструмента
     // сравниваем с точкой начала координат заготовки и:
     //      если длина инструмента не подходит,
-    //          завершаем метод (return), возвращая код ошибки (1 или 2)
+    //          завершаем метод (return), возвращая код ошибки (const)
     //      если всё в порядке, просто продолжаем выполнять функцию (и даже не обрабатываем это условие)
     // далее на ускоренном ходу поднмает инструмента в самый верх
     // ведет шпиндель сначала по оси X, а затем по Y до точки начала координат заготовки
@@ -1219,7 +1222,7 @@ class ToolChangePoint {
 
 
   // метод устанавливает координаты точки смены инструмента
-  void setToolSensorPoint() {
+  uint8_t setToolSensorPoint() {
     // !!!добавить проверку на выход из рабочей зоны при движении вниз
     // поиск координат датчика касания инструмента начинается включением тумблера pinSetToolSensor - пин 40
     // для инициализации датчика надо вручную подвести шпиндель над датчиком и нажать тумблер pinSetToolSensor - движение в этой
@@ -1229,6 +1232,10 @@ class ToolChangePoint {
     aMove.setMoveParam(1, 100, 'd');
     // датчик работает на размыкание при нажатии: двигаем шпиндель вниз пока не разомкнет контакты ToolTouchDetected
     while (digitalRead(ToolTouchDetected)) {
+        // проверяем на выход за нижний предел оси Z
+        if (machinePosition.getPositionZ() <= 0) {
+            return OVER_LOW_LIMIT;   // возвращаем код ошибки 1 (выход по оси Z за нижний предел)
+        }
         aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
     }
     // всё, инструмент коснулся датчика, записываем все три координаты этого местоположения
@@ -2374,8 +2381,11 @@ void loop() {
     } else if (digitalRead(pinGoToG54)) {
       refPoint.goToRPoint();                // передвигаем шпиндель к референтной точке
     }else if (digitalRead(pinSetToolSensor)) {
-      Serial.println("pressed pinSetToolSensor");
-      changeP.setToolSensorPoint();         // начинаем процесс инициализации датчика касания инструмента
+      // начинаем процесс инициализации датчика касания инструмента
+      uint8_t returnCode = changeP.setToolSensorPoint();
+      if (returnCode == 1) {
+        Serial.println("Over Low Limit Z axis. Tool Sensor nor initialized. Try using a longer tool");
+      }
     }else if (digitalRead(pinOutRect)) {
       centerFinder.startCenterOutRect();    // начинаем автоматический поиск центра заготовки
     }else if (!digitalRead(ToolTouchDetected)) {
