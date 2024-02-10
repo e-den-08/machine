@@ -91,6 +91,10 @@ bool zDir = false;                         // true - вверх, false - вни�
 const uint32_t zDistance = 65600;          // длина оси Z
 const uint16_t spacerHeight = 4000;        // высота проставки в шагах для установки референтной точки. 4000 шагов - это 5мм.
 
+int32_t rPointG54X = 0;                    // референтные точки G54 на каждой из осей. В шагах от начала координат станка
+int32_t rPointG54Y = 0;
+int32_t rPointG54Z = 0;
+
 int32_t xStepsFrame = 0;                   // количество шагов, сколько планируется выполнить в данном кадре
 int32_t yStepsFrame = 0;
 int32_t zStepsFrame = 0;                   // значение по z умножается на 2, потому что на этой оси стоит однозаходный винт
@@ -1345,11 +1349,6 @@ ToolChangePoint changeP;                // имплементим точку с�
 
 
 class ReferentPoint {
-  private:
-  int32_t rPointG54X = 0;            // референтные точки G54 на каждой из осей. В шагах от начала координат станка
-  int32_t rPointG54Y = 0;
-  int32_t rPointG54Z = 0;
-
   public:
 
   void setReferentialPointG54() {    // устанавливаем референтную точку
@@ -1359,16 +1358,6 @@ class ReferentPoint {
     rPointG54X = machinePosition.getPositionX();
     rPointG54Y = machinePosition.getPositionY();
     rPointG54Z = machinePosition.getPositionZ() - spacerHeight;
-  }
-
-  int32_t getRPointG54X() {          // методы возвращают значения референтных точек
-    return rPointG54X;
-  }
-  int32_t getRPointG54Y() {
-    return rPointG54Y;
-  }
-  int32_t getRPointG54Z() {
-    return rPointG54Z;
   }
 
   void goToRPoint() {       // метод ведет шпиндель к референтной точке
