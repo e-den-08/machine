@@ -384,7 +384,15 @@ class AutomaticMove {
     }
   }
 
+  // метод поднимает шпиндель в самый верх (если шпиндель уже не находится в самом верху)
+  void toRiseSpindle() {
+    setMoveParam(ACCELERATED, 0, A_UP);      // конфигурируем движение вверх на ускоренном ходу
+    while (machinePosition.getPositionZ() <= zDistance ) {
+        moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+    }
+  }
 
+  // сюда добалять еще методы
 };
 
 
@@ -1238,12 +1246,12 @@ class ToolChangePoint {
     // опускает шпиндель до точки начала координат заготовки
     // дальше просто эта функция завершается и .ncm программа продолжается как обычно
   uint8_t continueProgram() {
-    toRiseSpindle();        // поднимаем шпиндель
+    aMove.toRiseSpindle();        // поднимаем шпиндель
     moveAlongTable();        // отодвигаем стол
     moveXToolChange();    // двигаем шпиндель по X до точки смены инструмента
     // опускаем шпиндель до касания датчика инструмента
     if (moveDownUntilToucSensor()) {
-        toRiseSpindle();        // поднимаем шпиндель
+        aMove.toRiseSpindle();        // поднимаем шпиндель
         return GENERAL_ERROR;
     }
 
@@ -1258,7 +1266,7 @@ class ToolChangePoint {
         return TOO_SHORT_TOOL;
     }
 
-    toRiseSpindle();        // поднимаем шпиндель
+    aMove.toRiseSpindle();        // поднимаем шпиндель
     moveXToG54();       // двигаемся до G54 по всем трем осям
     moveYToG54();
     lowerZToG54();
@@ -1370,14 +1378,6 @@ class ToolChangePoint {
     }
     return 0;
   }
-
-  // метод поднимает шпиндель в самый верх (если шпиндель уже не находится в самом верху)
-  void toRiseSpindle() {
-    aMove.setMoveParam(ACCELERATED, 0, A_UP);      // конфигурируем движение вверх на ускоренном ходу
-    while (machinePosition.getPositionZ() <= zDistance ) {
-        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
-    }
-  }
 };
 
 ToolChangePoint changeP;                // имплементим точку смены инструмента
@@ -1397,27 +1397,14 @@ class ReferentPoint {
 
   void goToRPoint() {       // метод ведет шпиндель к референтной точке
     gSpeed = 0;         // декларируем, что перемещения сейчас будут на ускоренном ходу
-
-    toRiseSpindle();    // сначала надо поднять шпиндель в самый верх (если референтная точка находится ниже максимальной высоты оси Z)
+    //!!!
+    aMove.toRiseSpindle();    // сначала надо поднять шпиндель в самый верх (если референтная точка находится ниже максимальной высоты оси Z)
     goToRPointOnX();    // теперь, когда шпиндель вверху, перемещаемся по оси X до референтной точки (если в этом есть необходимость)
     goToRPointOnY();    // перемещаемся по оси Y до референтной точки (если в этом есть необходимость)
     lowerToRPoint();    // опускаем шпиндель по оси Z до референтной точки
                         // (если референтная точка ниже максимальной высоты оси Z)
                         // недоход до реф. точки составит величину spacerHeight (высота параллельки для выставления реф. точки)
                         // изначально эта величина планируется 5мм (4000 шагов)
-  }
-
-  void toRiseSpindle() {    // метод поднимает шпиндель в самый верх по оси Z
-    if (machinePosition.getPositionZ() < zDistance) {           // если текущее положение шпинделя ниже верхней точки
-      zDir = topFlag;                                                // устанавливаем флаг направления движения "Вверх"
-      digitalWrite(pinDirZ, top);                                 // устанавливаем значение пина, соответствующее данному направлению
-      while (machinePosition.getPositionZ() < zDistance) {        // поднимаем шпиндель пока текущее положение ниже верхней точки рабочего диапазона оси Z
-        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));    // функция движения по Z на ускоренном ходу
-      }
-      Serial.println("Spindle rised.");
-    } else {
-      Serial.println("Spindle already at the highest point.");
-    }
   }
 
   // метод подводит шпиндель к референтной точке по оси X
@@ -1739,7 +1726,7 @@ void lineParsing() {                // функция парсит строку
           // Для этого сначала нужно поднять шпиндель в самый верх и
           // отодвинуть стол, чтобы была возможность достать прежнюю фрезу
           // и вставить новую.
-          changeP.toRiseSpindle();          // поднимаем шпиндель
+          aMove.toRiseSpindle();          // поднимаем шпиндель
           changeP.moveAlongTable();         // отодвигаем стол
           // Теперь можно останавливать шпиндель и менять фрезу.
           // А пока меняется фреза, ожидаем нажатия кнопок:
