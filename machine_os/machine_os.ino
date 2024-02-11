@@ -128,6 +128,17 @@ const uint8_t TOO_LONG_TOOL = 8;        // инструмент в шпинде�
 
 const uint8_t GENERAL_ERROR = 255;
 
+// константы направления движения для автоматических перемещений
+const char A_RIGHT      = 'r';
+const char A_LEFT       = 'l';
+const char A_FORWARD    = 'f';
+const char A_BACK       = 'b';
+const char A_UP         = 't';
+const char A_DOWN       = 'd';
+// константы переключения между подачей и ускорунным перемещением
+const int ACCELERATED   = 0;
+const int AT_FEED       = 1;
+
 // описываем классы:
 
 
@@ -336,7 +347,7 @@ class AutomaticMove {
 
   // метод устанавливает направление движения, устанавливает пины в нужное состояние
   // ,выставляет необходимые флаги и устанавливает скорость движения
-  void setMoveParam(int g, int f, char direction) {
+  void setMoveParam(const int& g, const int& f, const char& direction) {
     // g: 1/0
     // f: числовое значение подачи
     // direction: t - вверх, d - вниз
@@ -372,6 +383,8 @@ class AutomaticMove {
         digitalWrite(pinDirY2, back);
     }
   }
+
+
 };
 
 
@@ -1255,7 +1268,7 @@ class ToolChangePoint {
 
   // опускаем шпиндель до G54
   void lowerZToG54() {
-    aMove.setMoveParam(0, 0, 'd');  // конфигурируем движение стола вниз на ускоренном
+    aMove.setMoveParam(ACCELERATED, 0, A_DOWN);  // конфигурируем движение стола вниз на ускоренном
     while (machinePosition.getPositionZ() > (rPointG54Z + toolLenDif)) {
         aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
     }
@@ -1263,7 +1276,7 @@ class ToolChangePoint {
 
   // двигаем шпиндель по Y до G54
   void moveYToG54() {
-    aMove.setMoveParam(0, 0, 'f');  // конфигурируем движение стола вперед на ускоренном
+    aMove.setMoveParam(ACCELERATED, 0, A_FORWARD);  // конфигурируем движение стола вперед на ускоренном
     while (machinePosition.getPositionY() < rPointG54Y) {
         aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
     }
@@ -1271,7 +1284,7 @@ class ToolChangePoint {
 
   // двигаем шпиндель по X до G54
   void moveXToG54() {
-    aMove.setMoveParam(0, 0, 'l');  // конфигурируем движение влево ускор.
+    aMove.setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
     while (machinePosition.getPositionX() > rPointG54X) {
         aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
     }
@@ -1282,13 +1295,13 @@ class ToolChangePoint {
     // выясняем с какой стороны от точки смены инструмента мы сейчас находимся
     if (machinePosition.getPositionX() < changePointX) {
       // мы находимся слева
-      aMove.setMoveParam(0, 0, 'r');  // конфигурируем движение вправо ускор.
+      aMove.setMoveParam(ACCELERATED, 0, RIGHT);  // конфигурируем движение вправо ускор.
       while (machinePosition.getPositionX() < changePointX) {
           aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
       }
     } else if (machinePosition.getPositionX() > changePointX) {
       // мы находимся справа от точки смены инструмента
-      aMove.setMoveParam(0, 0, 'l');  // конфигурируем движение влево ускор.
+      aMove.setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
       while (machinePosition.getPositionX() > changePointX) {
           aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
       }
@@ -1297,7 +1310,7 @@ class ToolChangePoint {
 
   // отодвигаем стол в крайнее дальнее положение
   void moveAlongTable() {
-    aMove.setMoveParam(0, 0, 'b');  // конфигурируем движение стола вдаль на ускоренном
+    aMove.setMoveParam(ACCELERATED, 0, A_BACK);  // конфигурируем движение стола вдаль на ускоренном
     while (machinePosition.getPositionY() > 0) {
         aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
     }
@@ -1332,7 +1345,7 @@ class ToolChangePoint {
   uint8_t raiseFewMilliveters(uint8_t distance) {
     int zStepsInMm      = 800;                          // количество шагов в 1мм по оси Z
     int finalDistance   = zStepsInMm * distance;        // шпиндель поднимется на distance миллиметров
-    aMove.setMoveParam(0, 0, 't');  // инициализируем характер движения
+    aMove.setMoveParam(ACCELERATED, 0, A_UP);  // инициализируем характер движения
     for (int i = 0; i < finalDistance; i++) {
         if (machinePosition.getPositionZ() >= zDistance) {
             Serial.println("Over High Limit Z axis. (raiseFewMilliveters())");
@@ -1345,7 +1358,7 @@ class ToolChangePoint {
 
   // метод опускает шпиндель до касания с датчиком инструмента
   uint8_t moveDownUntilToucSensor() {
-    aMove.setMoveParam(1, 150, 'd');
+    aMove.setMoveParam(AT_FEED, 150, A_DOWN);
     // датчик работает на размыкание при нажатии: двигаем шпиндель вниз пока не разомкнет контакты ToolTouchDetected
     while (digitalRead(ToolTouchDetected)) {
         // проверяем на выход за нижний предел оси Z
@@ -1360,7 +1373,7 @@ class ToolChangePoint {
 
   // метод поднимает шпиндель в самый верх (если шпиндель уже не находится в самом верху)
   void toRiseSpindle() {
-    aMove.setMoveParam(0, 0, 't');      // конфигурируем движение вверх на ускоренном ходу
+    aMove.setMoveParam(ACCELERATED, 0, A_UP);      // конфигурируем движение вверх на ускоренном ходу
     while (machinePosition.getPositionZ() <= zDistance ) {
         aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
     }
@@ -1464,7 +1477,7 @@ class ReferentPoint {
   void lowerToRPoint() {
     // определяем, не находимся ли мы в данный момент в референтной точке по оси Z
     if (machinePosition.getPositionZ() - spacerHeight > rPointG54Z) {
-      aMove.setMoveParam(0, 0, 'd');    // инициализируем движение вниз на ускоренном ходу
+      aMove.setMoveParam(ACCELERATED, 0, A_DOWN);    // инициализируем движение вниз на ускоренном ходу
       // вращаем двигатели до тех пор, пока координаты
       // референтной точки и текущего положения по данной оси не станут равны.
       while (machinePosition.getPositionZ() - spacerHeight > rPointG54Z) {
