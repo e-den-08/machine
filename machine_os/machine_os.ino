@@ -1295,7 +1295,7 @@ class ToolChangePoint {
     // выясняем с какой стороны от точки смены инструмента мы сейчас находимся
     if (machinePosition.getPositionX() < changePointX) {
       // мы находимся слева
-      aMove.setMoveParam(ACCELERATED, 0, RIGHT);  // конфигурируем движение вправо ускор.
+      aMove.setMoveParam(ACCELERATED, 0, A_RIGHT);  // конфигурируем движение вправо ускор.
       while (machinePosition.getPositionX() < changePointX) {
           aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
       }
