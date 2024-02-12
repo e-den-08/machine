@@ -392,6 +392,65 @@ class AutomaticMove {
     }
   }
 
+  // отодвигаем стол в крайнее дальнее положение
+  void moveAlongTable() {
+    setMoveParam(ACCELERATED, 0, A_BACK);  // конфигурируем движение стола вдаль на ускоренном
+    while (machinePosition.getPositionY() > 0) {
+        moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+    }
+  }
+
+  // двигаем шпиндель по X до точки смены инструмента
+  void moveXToolChange(const int32_t& changePointX) {
+    // выясняем с какой стороны от точки смены инструмента мы сейчас находимся
+    if (machinePosition.getPositionX() < changePointX) {
+      // мы находимся слева
+      setMoveParam(ACCELERATED, 0, A_RIGHT);  // конфигурируем движение вправо ускор.
+      while (machinePosition.getPositionX() < changePointX) {
+          moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+      }
+    } else if (machinePosition.getPositionX() > changePointX) {
+      // мы находимся справа от точки смены инструмента
+      setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
+      while (machinePosition.getPositionX() > changePointX) {
+          moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+      }
+    }
+  }
+
+  // двигаем шпиндель по X до G54
+  void moveXToG54() {
+    if (machinePosition.getPositionX() < rPointG54X) {
+        // мы слева от g54
+        setMoveParam(ACCELERATED, 0, A_RIGHT);  // конфигурируем движение вправо ускор
+        while (machinePosition.getPositionX() < rPointG54X) {
+            moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+        }
+    } else {
+        // мы справа от g54
+        setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
+        while (machinePosition.getPositionX() > rPointG54X) {
+            moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+        }
+    }
+  }
+
+  // двигаем шпиндель по Y до G54
+  void moveYToG54() {
+    if (machinePosition.getPositionY() < rPointG54Y) {
+        // мы находимся дальше (от оператора) точки g54
+        setMoveParam(ACCELERATED, 0, A_FORWARD);  // конфигурируем движение стола вперед на ускоренном
+        while (machinePosition.getPositionY() < rPointG54Y) {
+            moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+        }
+    } else {
+        // мы находимся ближе к оператору, чем точка g54
+        setMoveParam(ACCELERATED, 0, A_BACK);
+        while (machinePosition.getPositionY() > rPointG54Y) {
+            moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+        }
+    }
+  }
   // сюда добалять еще методы
 };
 
@@ -1247,8 +1306,8 @@ class ToolChangePoint {
     // дальше просто эта функция завершается и .ncm программа продолжается как обычно
   uint8_t continueProgram() {
     aMove.toRiseSpindle();        // поднимаем шпиндель
-    moveAlongTable();        // отодвигаем стол
-    moveXToolChange();    // двигаем шпиндель по X до точки смены инструмента
+    aMove.moveAlongTable();        // отодвигаем стол
+    aMove.moveXToolChange(changePointX);    // двигаем шпиндель по X до точки смены инструмента
     // опускаем шпиндель до касания датчика инструмента
     if (moveDownUntilToucSensor()) {
         aMove.toRiseSpindle();        // поднимаем шпиндель
@@ -1267,8 +1326,8 @@ class ToolChangePoint {
     }
 
     aMove.toRiseSpindle();        // поднимаем шпиндель
-    moveXToG54();       // двигаемся до G54 по всем трем осям
-    moveYToG54();
+    aMove.moveXToG54();       // двигаемся до G54 по всем трем осям
+    aMove.moveYToG54();
     lowerZToG54();
 
     return 0;   // возвращаем успешный код выполнения
@@ -1279,48 +1338,6 @@ class ToolChangePoint {
     aMove.setMoveParam(ACCELERATED, 0, A_DOWN);  // конфигурируем движение стола вниз на ускоренном
     while (machinePosition.getPositionZ() > (rPointG54Z + toolLenDif)) {
         aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
-    }
-  }
-
-  // двигаем шпиндель по Y до G54
-  void moveYToG54() {
-    aMove.setMoveParam(ACCELERATED, 0, A_FORWARD);  // конфигурируем движение стола вперед на ускоренном
-    while (machinePosition.getPositionY() < rPointG54Y) {
-        aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
-    }
-  }
-
-  // двигаем шпиндель по X до G54
-  void moveXToG54() {
-    aMove.setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
-    while (machinePosition.getPositionX() > rPointG54X) {
-        aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-    }
-  }
-
-  // двигаем шпиндель по X до точки смены инструмента
-  void moveXToolChange() {
-    // выясняем с какой стороны от точки смены инструмента мы сейчас находимся
-    if (machinePosition.getPositionX() < changePointX) {
-      // мы находимся слева
-      aMove.setMoveParam(ACCELERATED, 0, A_RIGHT);  // конфигурируем движение вправо ускор.
-      while (machinePosition.getPositionX() < changePointX) {
-          aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-      }
-    } else if (machinePosition.getPositionX() > changePointX) {
-      // мы находимся справа от точки смены инструмента
-      aMove.setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
-      while (machinePosition.getPositionX() > changePointX) {
-          aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-      }
-    }
-  }
-
-  // отодвигаем стол в крайнее дальнее положение
-  void moveAlongTable() {
-    aMove.setMoveParam(ACCELERATED, 0, A_BACK);  // конфигурируем движение стола вдаль на ускоренном
-    while (machinePosition.getPositionY() > 0) {
-        aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
     }
   }
 
@@ -1399,65 +1416,12 @@ class ReferentPoint {
     gSpeed = 0;         // декларируем, что перемещения сейчас будут на ускоренном ходу
     //!!!
     aMove.toRiseSpindle();    // сначала надо поднять шпиндель в самый верх (если референтная точка находится ниже максимальной высоты оси Z)
-    goToRPointOnX();    // теперь, когда шпиндель вверху, перемещаемся по оси X до референтной точки (если в этом есть необходимость)
-    goToRPointOnY();    // перемещаемся по оси Y до референтной точки (если в этом есть необходимость)
+    aMove.moveXToG54();       // теперь, когда шпиндель вверху, перемещаемся по оси X до референтной точки (если в этом есть необходимость)
+    aMove.moveYToG54();    // перемещаемся по оси Y до референтной точки (если в этом есть необходимость)
     lowerToRPoint();    // опускаем шпиндель по оси Z до референтной точки
                         // (если референтная точка ниже максимальной высоты оси Z)
                         // недоход до реф. точки составит величину spacerHeight (высота параллельки для выставления реф. точки)
                         // изначально эта величина планируется 5мм (4000 шагов)
-  }
-
-  // метод подводит шпиндель к референтной точке по оси X
-  void goToRPointOnX() {
-    int32_t deltaX = rPointG54X - machinePosition.getPositionX();    // расстояние, разница между текущим положением и референтной точкой. Может иметь отрицательное значение!
-    if (deltaX != 0) {                                             // определяем, не находимся ли мы в данный момент в референтной точке по оси X
-      // теперь определяем направление движения
-      if (deltaX > 0) {
-        xDir = rightFlag;                                               // устанавливаем флаг направления движения "вправо"
-        digitalWrite(pinDirX1, right);                             // значения пинов устанавливаем соответственно данному направлению
-        digitalWrite(pinDirX2, right);
-        while (machinePosition.getPositionX() < rPointG54X) {    // вращаем двигатели до тех пор, пока координаты референтной точки и текущего положения по данной оси не станут равны.
-          aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-        }
-      } else if (deltaX < 0) {
-        xDir = leftFlag;                                              // устанавливаем флаг направления движения "влево"
-        digitalWrite(pinDirX1, left);                              // значения пинов устанавливаем соответственно данному направлению
-        digitalWrite(pinDirX2, left);
-        while (machinePosition.getPositionX() > rPointG54X) {    // вращаем двигатели до тех пор, пока координаты референтной точки и текущего положения по данной оси не станут равны.
-          aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-        }
-      }
-      Serial.println("Spindle moved to RPoint on X axis");
-    } else {
-      Serial.println("Spindle dont need to move to RPoint on X axis");
-    }
-  }
-
-  // метод подводит шпиндель к референтной точке по оси Y
-  void goToRPointOnY() {
-    Serial.println("Go to g54");
-    int32_t deltaY = rPointG54Y - machinePosition.getPositionY();    // расстояние, разница между текущим положением и референтной точкой. Может иметь отрицательное значение!
-    if (deltaY != 0) {                                             // определяем, не находимся ли мы в данный момент в референтной точке по оси Y
-      // теперь определяем направление движения
-      if (deltaY > 0) {
-        yDir = forwardFlag;                                               // устанавливаем флаг направления движения "вперед"
-        digitalWrite(pinDirY1, forward);                           // значения пинов устанавливаем соответственно данному направлению
-        digitalWrite(pinDirY2, forward);
-        while (machinePosition.getPositionY() < rPointG54Y) {    // вращаем двигатели до тех пор, пока координаты референтной точки и текущего положения по данной оси не станут равны.
-          aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
-        }
-      } else if (deltaY < 0) {
-        yDir = backFlag;                                              // устанавливаем флаг направления движения "назад"
-        digitalWrite(pinDirY1, back);                              // значения пинов устанавливаем соответственно данному направлению
-        digitalWrite(pinDirY2, back);
-        while (machinePosition.getPositionY() > rPointG54Y) {    // вращаем двигатели до тех пор, пока координаты референтной точки и текущего положения по данной оси не станут равны.
-          aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
-        }
-      }
-      Serial.println("Spindle moved to RPoint on Y axis");
-    } else {
-      Serial.println("Spindle dont need to move to RPoint on Y axis");
-    }
   }
 
   // метод опускает шпиндель от самой верхней точки оси Z до референтной точки
@@ -1727,7 +1691,7 @@ void lineParsing() {                // функция парсит строку
           // отодвинуть стол, чтобы была возможность достать прежнюю фрезу
           // и вставить новую.
           aMove.toRiseSpindle();          // поднимаем шпиндель
-          changeP.moveAlongTable();         // отодвигаем стол
+          aMove.moveAlongTable();         // отодвигаем стол
           // Теперь можно останавливать шпиндель и менять фрезу.
           // А пока меняется фреза, ожидаем нажатия кнопок:
           //   2. все кнопки ручного перемещения по всем осям
@@ -2332,14 +2296,6 @@ private:
     uint32_t curPositionZ = machinePosition.getPositionZ();     // находим текущее положение по Z
     uint32_t spacerHeightPoint = topWorkpiece + spacerHeight;   // координаты точки на высоте проставки от поверхности
     int32_t moveDistanceZ = spacerHeightPoint - curPositionZ;  // расстояние от текущего местоположения до spacerHeightPoint по оси Z
-    Serial.print("curPositionZ: ");
-    Serial.println(curPositionZ);
-    Serial.print("topWorkpiece: ");
-    Serial.println(topWorkpiece);
-    Serial.print("spacerHeightPoint: ");
-    Serial.println(spacerHeightPoint);
-    Serial.print("moveDistanceZ: ");
-    Serial.println(moveDistanceZ);
     if (moveDistanceZ > 0) {
       // текущее местоположение ниже spacerHeightPoint: едем вверх
       gSpeed = 0;                                     // устанавливаем режим движения: ускоренное
@@ -2423,7 +2379,7 @@ void loop() {
     }else if (digitalRead(pinOutRect)) {
       centerFinder.startCenterOutRect();    // начинаем автоматический поиск центра заготовки
     }else if (digitalRead(pinGoChangePoint)) {
-      changeP.moveXToolChange();           // переходим к точке смены инструмента по X
+      aMove.moveXToolChange(changeP.changePointX);    // переходим к точке смены инструмента по X
     } else if (digitalRead(pinAutoSetTool)) {
       // продолжаем попытки установить инструмент, пока код выполнения больше нуля.
       // когда changeP.continueProgram() вернет код выполнения 0, продолжаем программу
