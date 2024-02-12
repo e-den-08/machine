@@ -490,8 +490,8 @@ AutomaticMove aMove;                // имплементим класс авт�
 
 
 class LimitSwitchTuning {           // класс для настройки нулевой точки станка по концевым выключателям
-  uint8_t tuneSpeedHigh = 15;       // скорость движения во время выхода в нулевые позиции
-  uint16_t tuneSpeedLow = 150;
+  uint8_t tuneSpeedHigh = 8;        // скорость движения во время выхода в нулевые позиции
+  uint16_t tuneSpeedLow = 176;
 
   public:
 
@@ -515,13 +515,12 @@ class LimitSwitchTuning {           // класс для настройки ну
         Serial.println("finish tuning X axis.");
         break;
       } else {
-        digitalWrite(pinStepX1, HIGH);
-        digitalWrite(pinStepX2, HIGH);
+        PORTE |= 1 << PORTE4;                 // подаем высокий уровень сигнала на первый мотор
+        PORTE |= 1 << PORTE5;                 // подаем высокий уровень сигнала на второй мотор
         delayMicroseconds(tuneSpeedHigh);
-        digitalWrite(pinStepX1, LOW);
-        digitalWrite(pinStepX2, LOW);
+        PORTE &= ~(1 << PORTE4);              // подаем низкий уровень сигнала на первый мотор
+        PORTE &= ~(1 << PORTE5);              // подаем низкий уровень сигнала на второй мотор
         delayMicroseconds(tuneSpeedLow);
-        // Serial.println("move tuning X axis");
       }
     }
   }
@@ -533,13 +532,12 @@ class LimitSwitchTuning {           // класс для настройки ну
         Serial.println("finish tuning Y axis.");
         break;
       } else {
-        digitalWrite(pinStepY1, HIGH);
-        digitalWrite(pinStepY2, HIGH);
+        PORTG |= 1 << PORTG5;                 // подаем высокий уровень сигнала на первый мотор
+        PORTB |= 1 << PORTB6;                 // подаем высокий уровень сигнала на второй мотор
         delayMicroseconds(tuneSpeedHigh);
-        digitalWrite(pinStepY1, LOW);
-        digitalWrite(pinStepY2, LOW);
+        PORTG &= ~(1 << PORTG5);              // подаем низкий уровень сигнала на первый мотор
+        PORTB &= ~(1 << PORTB6);              // подаем низкий уровень сигнала на второй мотор
         delayMicroseconds(tuneSpeedLow);
-        // Serial.println("move tuning Y axis");
       }
     }
   }
@@ -551,11 +549,10 @@ class LimitSwitchTuning {           // класс для настройки ну
         Serial.println("finish tuning Z axis.");
         break;
       } else {
-        digitalWrite(pinStepZ, HIGH);
+        PORTH |= 1 << PORTH6;                 // подаем высокий уровень сигнала на мотор Z
         delayMicroseconds(tuneSpeedHigh);
-        digitalWrite(pinStepZ, LOW);
+        PORTH &= ~(1 << PORTH6);              // подаем низкий уровень сигнала на мотор Z
         delayMicroseconds(tuneSpeedLow);
-        // Serial.println("move tuning Y axis");
       }
     }
   }
@@ -1346,23 +1343,6 @@ class ToolChangePoint {
     int32_t tempCurToolEnd = machinePosition.getPositionZ();
     int32_t tempToolLenDif = tempCurToolEnd - changePointZ;
 
-    Serial.print("tempCurToolEnd: ");
-    Serial.println(tempCurToolEnd);
-    Serial.print("changePointZ: ");
-    Serial.println(changePointZ);
-    Serial.print("tempToolLenDif: ");
-    Serial.println(tempToolLenDif);
-    Serial.print("rPointG54Z: ");
-    Serial.println(rPointG54Z);
-    Serial.print("rPointG54Z + tempToolLenDif: ");
-    Serial.println(rPointG54Z + tempToolLenDif);
-    Serial.print("zDistance: ");
-    Serial.println(zDistance);
-    Serial.print("curToolEnd: ");
-    Serial.println(curToolEnd);
-    Serial.print("toolLenDif: ");
-    Serial.println(toolLenDif);
-    Serial.print("(rPointG54Z + tempToolLenDif) > zDistance: ");
     bool whatIsIt =
             (
                 static_cast<int32_t>(rPointG54Z) +
@@ -1456,6 +1436,7 @@ class ReferentPoint {
     rPointG54X = machinePosition.getPositionX();
     rPointG54Y = machinePosition.getPositionY();
     rPointG54Z = machinePosition.getPositionZ() - spacerHeight;
+    Serial.println("G54 point is installed successfully.");
   }
 
   void goToRPoint() {       // метод ведет шпиндель к референтной точке
