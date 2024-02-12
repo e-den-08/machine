@@ -147,7 +147,7 @@ class SpeedControl {
   const float qEquilateral = 1.414;           // коэффициент увеличения длительности такта при движении по 2 осям X и Y (равносторонний треугольник)
   const float qNotEquiLateral = 1.153;        // коэффициент при движении по 2 осям с участием оси Z
   const float qThreeAxis = 1.499;             // коэффициент для 3-х осей
-  const uint16_t durLow1AxAccel = 150;        // длительность сигнала низкого уровня на ускоренном переменщении при движении только по одной из осей
+  const uint16_t durLow1AxAccel = 135;        // длительность сигнала низкого уровня на ускоренном переменщении при движении только по одной из осей
   const uint16_t durLow2AxAccel = durLow1AxAccel * qEquilateral;       // длительность сигнала низкого уровня на ускоренном перемещении по двум осям (без участия оси Z)
   const uint16_t durLow2AxZAccel = durLow1AxAccel * qNotEquiLateral;   // длительность сигнала низкого уровня на ускоренном перемещении по двум осям (c участием оси Z)
   const uint16_t durLow3AxAccel = durLow1AxAccel * qThreeAxis;         // длительность сигнала низкого уровня на ускоренном перемещении по трем осям одновременно
@@ -1121,8 +1121,7 @@ class ManualControl {     // класс ручного управления пе
     uint32_t lengthYAxis = 98000;                       // длина рабочей части оси Y в шагах
     uint8_t breakDist = 237;                            // длина тормозного пути в шагах (зависит от коэффициента замедления)
     uint8_t stopOutWorkArea = digitalRead(pinEnTuning); // проверяем, включено ли ограничение выхода за пределы рабочего пространства
-    Serial.print("stopOutWorkArea: ");
-    Serial.println(stopOutWorkArea);
+
     while (digitalRead(pressedButton)) {                // отлавливаем конец нажатия кнопки
       if (stopOutWorkArea && pressedButton == pinToLeft && machinePosition.getPositionX() <= 0 + breakDist) {
         Serial.println("out of range! axis X to left");
@@ -1355,7 +1354,7 @@ class ToolChangePoint {
     Serial.println(tempToolLenDif);
     Serial.print("rPointG54Z: ");
     Serial.println(rPointG54Z);
-    Serial.print("rPointG54Z + toolLenDif: ");
+    Serial.print("rPointG54Z + tempToolLenDif: ");
     Serial.println(rPointG54Z + tempToolLenDif);
     Serial.print("zDistance: ");
     Serial.println(zDistance);
@@ -1363,8 +1362,22 @@ class ToolChangePoint {
     Serial.println(curToolEnd);
     Serial.print("toolLenDif: ");
     Serial.println(toolLenDif);
+    Serial.print("(rPointG54Z + tempToolLenDif) > zDistance: ");
+    bool whatIsIt =
+            (
+                static_cast<int32_t>(rPointG54Z) +
+                static_cast<int32_t>(tempToolLenDif)
+            )
+            > static_cast<int32_t>(zDistance);
+    Serial.println(whatIsIt);
 
-    if ((int)(rPointG54Z + tempToolLenDif) > (int)zDistance) {
+    if  (
+            (
+                static_cast<int32_t>(rPointG54Z) +
+                static_cast<int32_t>(tempToolLenDif)
+            )
+            > static_cast<int32_t>(zDistance)
+        ) {
         Serial.println("Tool is too long");
         return TOO_LONG_TOOL;
     } else if ((rPointG54Z + tempToolLenDif) < 0) {
