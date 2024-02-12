@@ -456,7 +456,33 @@ class AutomaticMove {
     }
     Serial.println("used new move Y to G54");
   }
-  // сюда добалять еще методы
+
+  // метод опускает шпиндель до касания с датчиком инструмента
+  uint8_t moveDownUntilTouchSensor() {
+    setMoveParam(AT_FEED, 150, A_DOWN);
+    // датчик работает на размыкание при нажатии: двигаем шпиндель вниз пока не разомкнет контакты ToolTouchDetected
+    while (digitalRead(ToolTouchDetected)) {
+        // проверяем на выход за нижний предел оси Z
+        if (machinePosition.getPositionZ() <= 0) {
+            Serial.println("Over Low Limit Z axis. Tool Sensor nor initialized. Try using a longer tool");
+            return OVER_LOW_LIMIT;   // возвращаем код ошибки 1 (выход по оси Z за нижний предел)
+        }
+        moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+    }
+    Serial.println("used new Down Until Touch Sensor");
+    return 0;
+  }
+
+  // опускаем шпиндель до G54
+  void lowerZToG54(const uint32_t& toolLenDif) {
+    setMoveParam(ACCELERATED, 0, A_DOWN);  // конфигурируем движение стола вниз на ускоренном
+    uint32_t destinationPointZ = rPointG54Z + toolLenDif + spacerHeight;
+    while (machinePosition.getPositionZ() > destinationPointZ) {
+        moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+    }
+    Serial.println("used new lower Z to G54");
+  }
+  // сюда добавлять еще методы
 };
 
 
@@ -1314,7 +1340,7 @@ class ToolChangePoint {
     aMove.moveAlongTable();        // отодвигаем стол
     aMove.moveXToolChange(changePointX);    // двигаем шпиндель по X до точки смены инструмента
     // опускаем шпиндель до касания датчика инструмента
-    if (moveDownUntilToucSensor()) {
+    if (aMove.moveDownUntilTouchSensor()) {
         aMove.toRiseSpindle();        // поднимаем шпиндель
         return GENERAL_ERROR;
     }
@@ -1333,17 +1359,9 @@ class ToolChangePoint {
     aMove.toRiseSpindle();        // поднимаем шпиндель
     aMove.moveXToG54();       // двигаемся до G54 по всем трем осям
     aMove.moveYToG54();
-    lowerZToG54();
+    aMove.lowerZToG54(toolLenDif);
 
     return 0;   // возвращаем успешный код выполнения
-  }
-
-  // опускаем шпиндель до G54
-  void lowerZToG54() {
-    aMove.setMoveParam(ACCELERATED, 0, A_DOWN);  // конфигурируем движение стола вниз на ускоренном
-    while (machinePosition.getPositionZ() > (rPointG54Z + toolLenDif)) {
-        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
-    }
   }
 
   // метод устанавливает координаты точки смены инструмента
@@ -1354,7 +1372,7 @@ class ToolChangePoint {
     // После касания инструментом датчика, поднимаем инструмент на пару миллиметров Z
 
     // опускаем шпиндель до касапния датчика инструмента
-    if (moveDownUntilToucSensor()) {
+    if (aMove.moveDownUntilTouchSensor()) {
         return GENERAL_ERROR;
     }
     // всё, инструмент коснулся датчика, записываем все три координаты этого местоположения
@@ -1385,21 +1403,6 @@ class ToolChangePoint {
     }
     return 0;
   }
-
-  // метод опускает шпиндель до касания с датчиком инструмента
-  uint8_t moveDownUntilToucSensor() {
-    aMove.setMoveParam(AT_FEED, 150, A_DOWN);
-    // датчик работает на размыкание при нажатии: двигаем шпиндель вниз пока не разомкнет контакты ToolTouchDetected
-    while (digitalRead(ToolTouchDetected)) {
-        // проверяем на выход за нижний предел оси Z
-        if (machinePosition.getPositionZ() <= 0) {
-            Serial.println("Over Low Limit Z axis. Tool Sensor nor initialized. Try using a longer tool");
-            return OVER_LOW_LIMIT;   // возвращаем код ошибки 1 (выход по оси Z за нижний предел)
-        }
-        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
-    }
-    return 0;
-  }
 };
 
 ToolChangePoint changeP;                // имплементим точку смены инструмента
@@ -1422,27 +1425,11 @@ class ReferentPoint {
     //!!!
     aMove.toRiseSpindle();    // сначала надо поднять шпиндель в самый верх (если референтная точка находится ниже максимальной высоты оси Z)
     aMove.moveXToG54();       // теперь, когда шпиндель вверху, перемещаемся по оси X до референтной точки (если в этом есть необходимость)
-    aMove.moveYToG54();    // перемещаемся по оси Y до референтной точки (если в этом есть необходимость)
-    lowerToRPoint();    // опускаем шпиндель по оси Z до референтной точки
+    aMove.moveYToG54();       // перемещаемся по оси Y до референтной точки (если в этом есть необходимость)
+    aMove.lowerZToG54(changeP.toolLenDif);    // опускаем шпиндель по оси Z до референтной точки
                         // (если референтная точка ниже максимальной высоты оси Z)
                         // недоход до реф. точки составит величину spacerHeight (высота параллельки для выставления реф. точки)
                         // изначально эта величина планируется 5мм (4000 шагов)
-  }
-
-  // метод опускает шпиндель от самой верхней точки оси Z до референтной точки
-  void lowerToRPoint() {
-    // определяем, не находимся ли мы в данный момент в референтной точке по оси Z
-    if (machinePosition.getPositionZ() - spacerHeight > rPointG54Z) {
-      aMove.setMoveParam(ACCELERATED, 0, A_DOWN);    // инициализируем движение вниз на ускоренном ходу
-      // вращаем двигатели до тех пор, пока координаты
-      // референтной точки и текущего положения по данной оси не станут равны.
-      while (machinePosition.getPositionZ() - spacerHeight > rPointG54Z) {
-        aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
-      }
-      Serial.println("Spindle lowered to RPoint.");
-    } else {
-      Serial.println("Spindle dont need to lower to RPoint");
-    }
   }
 };
 
