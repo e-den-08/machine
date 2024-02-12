@@ -390,6 +390,7 @@ class AutomaticMove {
     while (machinePosition.getPositionZ() <= zDistance ) {
         moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
     }
+    Serial.println("used new spindle rise");
   }
 
   // отодвигаем стол в крайнее дальнее положение
@@ -398,6 +399,7 @@ class AutomaticMove {
     while (machinePosition.getPositionY() > 0) {
         moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
     }
+    Serial.println("used new move along table");
   }
 
   // двигаем шпиндель по X до точки смены инструмента
@@ -416,6 +418,7 @@ class AutomaticMove {
           moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
       }
     }
+    Serial.println("used new move to Tool change");
   }
 
   // двигаем шпиндель по X до G54
@@ -433,6 +436,7 @@ class AutomaticMove {
             moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
         }
     }
+    Serial.println("used new move X to G54");
   }
 
   // двигаем шпиндель по Y до G54
@@ -450,6 +454,7 @@ class AutomaticMove {
             moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
         }
     }
+    Serial.println("used new move Y to G54");
   }
   // сюда добалять еще методы
 };
