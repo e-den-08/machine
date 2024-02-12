@@ -1347,10 +1347,22 @@ class ToolChangePoint {
     int32_t tempCurToolEnd = machinePosition.getPositionZ();
     int32_t tempToolLenDif = tempCurToolEnd - changePointZ;
 
+    Serial.print("tempCurToolEnd: ");
+    Serial.println(tempCurToolEnd);
+    Serial.print("changePointZ: ");
+    Serial.println(changePointZ);
     Serial.print("tempToolLenDif: ");
     Serial.println(tempToolLenDif);
+    Serial.print("rPointG54Z: ");
+    Serial.println(rPointG54Z);
     Serial.print("rPointG54Z + toolLenDif: ");
     Serial.println(rPointG54Z + tempToolLenDif);
+    Serial.print("zDistance: ");
+    Serial.println(zDistance);
+    Serial.print("curToolEnd: ");
+    Serial.println(curToolEnd);
+    Serial.print("toolLenDif: ");
+    Serial.println(toolLenDif);
 
     if ((int)(rPointG54Z + tempToolLenDif) > (int)zDistance) {
         Serial.println("Tool is too long");
