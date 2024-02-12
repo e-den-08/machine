@@ -147,7 +147,7 @@ class SpeedControl {
   const float qEquilateral = 1.414;           // коэффициент увеличения длительности такта при движении по 2 осям X и Y (равносторонний треугольник)
   const float qNotEquiLateral = 1.153;        // коэффициент при движении по 2 осям с участием оси Z
   const float qThreeAxis = 1.499;             // коэффициент для 3-х осей
-  const uint16_t durLow1AxAccel = 120;        // длительность сигнала низкого уровня на ускоренном переменщении при движении только по одной из осей
+  const uint16_t durLow1AxAccel = 150;        // длительность сигнала низкого уровня на ускоренном переменщении при движении только по одной из осей
   const uint16_t durLow2AxAccel = durLow1AxAccel * qEquilateral;       // длительность сигнала низкого уровня на ускоренном перемещении по двум осям (без участия оси Z)
   const uint16_t durLow2AxZAccel = durLow1AxAccel * qNotEquiLateral;   // длительность сигнала низкого уровня на ускоренном перемещении по двум осям (c участием оси Z)
   const uint16_t durLow3AxAccel = durLow1AxAccel * qThreeAxis;         // длительность сигнала низкого уровня на ускоренном перемещении по трем осям одновременно
@@ -1344,23 +1344,36 @@ class ToolChangePoint {
         aMove.toRiseSpindle();        // поднимаем шпиндель
         return GENERAL_ERROR;
     }
+    int32_t tempCurToolEnd = machinePosition.getPositionZ();
+    int32_t tempToolLenDif = tempCurToolEnd - changePointZ;
 
-    curToolEnd = machinePosition.getPositionZ();
-    toolLenDif = curToolEnd - changePointZ;
+    Serial.print("tempToolLenDif: ");
+    Serial.println(tempToolLenDif);
+    Serial.print("rPointG54Z + toolLenDif: ");
+    Serial.println(rPointG54Z + tempToolLenDif);
 
-    if ((rPointG54Z + toolLenDif) > zDistance) {
+    if ((int)(rPointG54Z + tempToolLenDif) > (int)zDistance) {
         Serial.println("Tool is too long");
         return TOO_LONG_TOOL;
-    } else if ((rPointG54Z + toolLenDif) < 0) {
+    } else if ((rPointG54Z + tempToolLenDif) < 0) {
         Serial.println("Tool is too short");
         return TOO_SHORT_TOOL;
     }
+
+    curToolEnd = tempCurToolEnd;
+    toolLenDif = tempToolLenDif;
+
+    Serial.print("curToolEnd: ");
+    Serial.println(curToolEnd);
+    Serial.print("toolLenDif: ");
+    Serial.println(toolLenDif);
 
     aMove.toRiseSpindle();        // поднимаем шпиндель
     aMove.moveXToG54();       // двигаемся до G54 по всем трем осям
     aMove.moveYToG54();
     aMove.lowerZToG54(toolLenDif);
 
+    Serial.println("The tool is successfully installed!");
     return 0;   // возвращаем успешный код выполнения
   }
 
@@ -1697,7 +1710,13 @@ void lineParsing() {                // функция парсит строку
               // продолжаем попытки установить инструмент, пока код выполнения больше нуля.
               // когда changeP.continueProgram() вернет код выполнения 0, продолжаем программу
               while (changeP.continueProgram()) {
-                Serial.println("This tool is no good, insert another tool");
+                // поднимаем шпиндель в самый верх для установки подходящего инструмента
+                aMove.toRiseSpindle();
+                while (!digitalRead(pinAutoSetTool)) {
+                    // ждем нажатия кнопки Continue prograм после замены инструмента
+                    // неподходящего по длине на подходящий по длине
+                    mControl.isOnManual();  // слушаем нажатие кнопок ручного управления
+                }
               }
               break;
             }
@@ -2376,9 +2395,14 @@ void loop() {
       // продолжаем попытки установить инструмент, пока код выполнения больше нуля.
       // когда changeP.continueProgram() вернет код выполнения 0, продолжаем программу
       while (changeP.continueProgram()) {
-        Serial.println("This tool is no good, insert another tool");
+        // поднимаем шпиндель в самый верх для установки подходящего инструмента
+        aMove.toRiseSpindle();
+        while (!digitalRead(pinAutoSetTool)) {
+            // ждем нажатия кнопки Continue prograм после замены инструмента
+            // неподходящего по длине на подходящий по длине
+            mControl.isOnManual();  // слушаем нажатие кнопок ручного управления
+        }
       }
-      Serial.println("tool installed!");
       break;
     }
   }
