@@ -1445,15 +1445,15 @@ ISR(TIMER5_OVF_vect)
 
 ISR(TIMER3_COMPA_vect)
 {
-  
+
 }
 ISR(TIMER4_COMPA_vect)
 {
-  
+
 }
 ISR(TIMER5_COMPA_vect)
 {
-  
+
 }
 
 void setup() {
@@ -2420,7 +2420,6 @@ void loop() {
   delay(1500);                  // даем возможность запуститься блокам питания перед считыванием состояния пульта упавления
   digitalWrite(pinEn, LOW);     // включаем двигатели
   while (true) {                // основной цикл
-    Serial.println("here");
     mControl.isOnManual();      // проверяем нажата ли одна из кнопок ручного перемещения
     if (digitalRead(pinTuneMachine)) {      // нажат тумблер выхода в ноль координат станка
       limitSwitchTuning.tuneMachine();      // выводим оси станка в нулевые позиции
