@@ -5,7 +5,7 @@
 
 
 # инициализация:
-file_name = '30_20mm'
+file_name = 'speed_test'
 
 folder_source = 'source/'
 encoding_val = 'cp1251'
