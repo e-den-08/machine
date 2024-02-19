@@ -1682,7 +1682,7 @@ void read_line_sd()
     char curChar = ncFile.read();   // читаем символ из .ncm файла
 
     while (true) {                  // поштучно читаем символы из файла
-        if (curChar = '\n') {
+        if (curChar == '\n') {
             break;                  // заканчиваем читать этот кадр
         } else if (curChar == 'X') {                // в строке нашли координату X
             char xStepsTemp[7];                     // количество шагов в кадре по X (массив char)
@@ -1697,7 +1697,6 @@ void read_line_sd()
                     continue;                       // переходим к чтению следующего символа в .ncm файле
                 } else if (curChar == '-') {        // в текущей координате обнаружен знак минус
                     minusX = true;
-                    i++;                            // увеличиваем разряд для следующей цифры
                     continue;                       // переходим к чтению следующего символа в .ncm файле
                 } else {
                     // если мы пришли сюда, значит все цифры числа прочитаны полностью
@@ -1711,6 +1710,10 @@ void read_line_sd()
                         xStepsFrame = -xStepsFrame;
                         minusX = false;             // обнуляем значение флага
                     }
+                    Serial.print("xStepsFrameABS: ");
+                    Serial.println(xStepsFrameABS);
+                    Serial.print("xStepsFrame: ");
+                    Serial.println(xStepsFrame);
                     break;                          // Выходим из цикла поиска всех цифр за буквой
                 }
             }
@@ -1727,7 +1730,6 @@ void read_line_sd()
                     continue;                       // переходим к чтению следующего символа в .ncm файле
                 } else if (curChar == '-') {        // в текущей координате обнаружен знак минус
                     minusY = true;
-                    i++;                            // увеличиваем разряд для следующей цифры
                     continue;                       // переходим к чтению следующего символа в .ncm файле
                 } else {
                     // если мы пришли сюда, значит все цифры числа прочитаны полностью
@@ -1741,6 +1743,8 @@ void read_line_sd()
                         yStepsFrame = -yStepsFrame;
                         minusY = false;             // обнуляем значение флага
                     }
+                    Serial.print("yStepsFrame: ");
+                    Serial.println(yStepsFrame);
                     break;                          // Выходим из цикла поиска всех цифр за буквой
                 }
             }
@@ -1757,7 +1761,6 @@ void read_line_sd()
                     continue;                       // переходим к чтению следующего символа в .ncm файле
                 } else if (curChar == '-') {        // в текущей координате обнаружен знак минус
                     minusZ = true;
-                    i++;                            // увеличиваем разряд для следующей цифры
                     continue;                       // переходим к чтению следующего символа в .ncm файле
                 } else {
                     // если мы пришли сюда, значит все цифры числа прочитаны полностью
@@ -1771,6 +1774,8 @@ void read_line_sd()
                         zStepsFrame = -zStepsFrame;
                         minusZ = false;             // обнуляем значение флага
                     }
+                    Serial.print("zStepsFrame: ");
+                    Serial.println(zStepsFrame);
                     break;                          // Выходим из цикла поиска всех цифр за буквой
                 }
             }
@@ -1793,6 +1798,8 @@ void read_line_sd()
                     if (gTempInt == ACCELERATED || gTempInt == AT_FEED) {
                         gSpeed = gTempInt;
                     }
+                    Serial.print("gSpeed: ");
+                    Serial.println(gSpeed);
                     break;                          // Выходим из цикла поиска всех цифр за буквой
                 }
             }
@@ -1812,9 +1819,13 @@ void read_line_sd()
                     fTempChar[i] = '\0';
                     fSpeed = atol(fTempChar);       // массив символов переводим в числовой тип
                     speedSetting.setSpeed();          // вычисляем параметры движения для новой скорости
+                    Serial.print("fSpeed: ");
+                    Serial.println(fSpeed);
                     break;                            // Выходим из цикла поиска всех цифр за буквой
                 }
             }
+        } else {
+            curChar = ncFile.read();            // читаем следующий символ
         }
     }
 }
@@ -2013,8 +2024,10 @@ void report() {
 void startProgram() {
   if (digitalRead(pinStart)) {  // если был нажат тумблер "Старт программы"
     synFrameProc sfp;             // имплементим класс распределения шагов// uint32_t oldZPosition = machinePosition.getPositionZ();
+    openNcmFile();                // открываем sd карту для чтения
     while (true) {
       read_line_sd();             // читаем строку из файла на флешке и парсим её
+      Serial.println("after read_line");
       defineDirection();          // устанавливаем направление движения по всем осям
       sfp.sfpFrameProcessing();   // отрабатываем шаги
       // report();                   // мониторим результаты работы программы на экране компа
