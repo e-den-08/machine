@@ -1947,9 +1947,9 @@ void countFrames() {            // функция считает количес�
 
 void report() {
   // считаем запланированное количество шагов, сколько должно было бы быть выполнено от начала программы до текущего момента:
-  xPlaneToTime = xPlaneToTime + xStepsFrameABS;
-  yPlaneToTime = yPlaneToTime + yStepsFrameABS;
-  zPlaneToTime = zPlaneToTime + zStepsFrameABS;
+  xPlaneToTime += xStepsFrameABS;
+  yPlaneToTime += yStepsFrameABS;
+  zPlaneToTime += zStepsFrameABS;
 
   // массивы символов для вывода в консоль типа 00000328
   char fXStepsFrameABS[9];  // запланированные шаги в пределах одного кадра
