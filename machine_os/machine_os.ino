@@ -1946,7 +1946,6 @@ void countFrames() {            // функция считает количес�
 }
 
 void report() {
-  /*
   // считаем запланированное количество шагов, сколько должно было бы быть выполнено от начала программы до текущего момента:
   xPlaneToTime = xPlaneToTime + xStepsFrameABS;
   yPlaneToTime = yPlaneToTime + yStepsFrameABS;
@@ -1998,7 +1997,6 @@ void report() {
   Serial.println("Farame steps done   : X" + String(fXStepsDone) + " Y" + String(fYStepsDone) + " Z" + String(fZStepsDone));
   Serial.println("To time steps planned: X" + String(fXPlaneToTime) + " Y" + String(fYPlaneToTime) + " Z" + String(fZPlaneToTime));
   Serial.println("To time steps done   : X" + String(fXDoneToTime) + " Y" + String(fYDoneToTime) + " Z" + String(fZDoneToTime));
-  */
 }
 
 void startProgram() {
@@ -2009,7 +2007,7 @@ void startProgram() {
       read_line_sd();             // читаем строку из файла на флешке и парсим её
       defineDirection();          // устанавливаем направление движения по всем осям
       sfp.sfpFrameProcessing();   // отрабатываем шаги
-      // report();                   // мониторим результаты работы программы на экране компа
+      report();                   // мониторим результаты работы программы на экране компа
       xStepsDone = 0;             // обнуляем количество выполненных шагов в текущем кадре
       yStepsDone = 0;
       zStepsDone = 0;
