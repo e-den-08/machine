@@ -2527,19 +2527,6 @@ void loop() {
       centerFinder.startCenterOutRect();    // начинаем автоматический поиск центра заготовки
     } else if (digitalRead(pinGoChangePoint)) {
       aMove.moveXToolChange(changeP.changePointX);    // переходим к точке смены инструмента по X
-    } else if (digitalRead(pinAutoSetTool)) {
-      // продолжаем попытки установить инструмент, пока код выполнения больше нуля.
-      // когда changeP.continueProgram() вернет код выполнения 0, продолжаем программу
-      while (changeP.continueProgram()) {
-        // поднимаем шпиндель в самый верх для установки подходящего инструмента
-        aMove.toRiseSpindle();
-        while (!digitalRead(pinAutoSetTool)) {
-            // ждем нажатия кнопки Continue prograм после замены инструмента
-            // неподходящего по длине на подходящий по длине
-            mControl.isOnManual();  // слушаем нажатие кнопок ручного управления
-        }
-        break;
-      }
     }
   }
 }
