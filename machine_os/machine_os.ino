@@ -2521,11 +2521,11 @@ void loop() {
       refPoint.setReferentialPointG54();    // устанавливаем референтную точку
     } else if (digitalRead(pinGoToG54)) {
       refPoint.goToRPoint();                // передвигаем шпиндель к референтной точке
-    }else if (digitalRead(pinSetToolSensor)) {
+    } else if (digitalRead(pinSetToolSensor)) {
       changeP.setToolSensorPoint();         // начинаем процесс инициализации датчика касания инструмента
-    }else if (digitalRead(pinOutRect)) {
+    } else if (digitalRead(pinOutRect)) {
       centerFinder.startCenterOutRect();    // начинаем автоматический поиск центра заготовки
-    }else if (digitalRead(pinGoChangePoint)) {
+    } else if (digitalRead(pinGoChangePoint)) {
       aMove.moveXToolChange(changeP.changePointX);    // переходим к точке смены инструмента по X
     } else if (digitalRead(pinAutoSetTool)) {
       // продолжаем попытки установить инструмент, пока код выполнения больше нуля.
@@ -2538,8 +2538,8 @@ void loop() {
             // неподходящего по длине на подходящий по длине
             mControl.isOnManual();  // слушаем нажатие кнопок ручного управления
         }
+        break;
       }
-      break;
     }
   }
 }
