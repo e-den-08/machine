@@ -2018,6 +2018,108 @@ void startProgram() {
   }
 }
 
+// структура с массивом координат точки G54
+struct G54
+{
+    uint32_t x;                         // координата центра заготовки по оси X
+    uint32_t y;                         // координата центра заготовки по оси Y
+    uint32_t z;                         // координата центра заготовки по оси Z
+};
+
+// стркутура с координатами краев заготовки
+struct WorkpieceEdges
+{
+    uint32_t top;                  // координата верха заготовки (по оси Z)
+    uint32_t left;                 // координата левой стенки заготовки (по оси X)
+    uint32_t right;                // координата правой стенки заготовки (по оси X)
+    uint32_t back;                 // координата задней стенки заготовки (ось Y)
+    uint32_t forward;              // координата передней стенки заготовки (ось Y)
+};
+
+// структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
+struct StepsInMm
+{
+    const uint16_t xy = 400;       // шагов в 1мм по осям X и Y
+    const uint16_t z = 800;        // при 1/8 шага в 1мм движения по оси Z 800 импульсов
+};
+
+
+// класс описывает поиск нулевой точки заготовки
+class G54Finder
+{
+public:
+    void searchG54Start()
+    {
+        // исключаем дребезг контактов
+        if (contactDebouncing())
+        {
+            // находимся в режиме поска G54 пока включен тумблер startSearchG54Rectangle
+            while ()
+            {
+                static bool counter = true;
+                if (counter)
+                {
+                    Serial.print("stepsInMm.xy: ");
+                    serial.println(stepsInMm.xy);
+                    Serial.print("stepsInMm.z: ");
+                    serial.println(stepsInMm.z);
+                    Serial.print("WorkpieceEdges.top: ");
+                    serial.println(workpieceEdges.top);
+                    Serial.print("WorkpieceEdges.left: ");
+                    serial.println(workpieceEdges.left);
+                    Serial.print("WorkpieceEdges.right: ");
+                    serial.println(workpieceEdges.right);
+                    Serial.print("WorkpieceEdges.back: ");
+                    serial.println(workpieceEdges.back);
+                    Serial.print("WorkpieceEdges.forward: ");
+                    serial.println(workpieceEdges.forward);
+                    Serial.print("g54.x: ");
+                    serial.println(g54.x);
+                    Serial.print("g54.y: ");
+                    serial.println(g54.y);
+                    Serial.print("g54.z: ");
+                    serial.println(g54.z);
+                }
+            }
+            Serial.println("searcing G54 is finished");
+            // когда тумблер отключился:
+            //      вычисляем координаты точки G54
+            //      записываем эти координаты в соответствуюущий объект
+            //      перемещаем шпиндель в G54 c помощью refPoint.goToRPoint()
+        }
+    }
+
+    bool contactDebouncing()
+    {
+        uint16_t duration = 1000;                           // продолжительность паузы в миллисекундах
+        // время начала профилактической паузы подавления дребезга контактов
+        unsigned long startDebouncing = millis();
+        // время конца профилактической паузы подавления дребезга контактов
+        unsigned long finishDebouncing = startDebouncing + duration;
+        // выдерживаем необходимую паузу
+        while (millis() < finishDebouncing) {}
+        // проверяем, если тумблер все еще нажат, значит его нажал оператор и это не дребезг контактов
+        if (digitalRead(startSearchG54Rectangle))
+        {
+            return true;    // включится режим поска точки G54
+        }
+        else
+        {
+            return false;   // выполнение программы вернется обратно в Main()
+        }
+    }
+
+private:
+    const uint32_t retraction = stepsInMmXY * 2;    // расстояние отвода датчика от стенки после касания
+    StepsInMm stepsInMm;                // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
+    // определение структуры с координатами краев заготовки
+    WorkpieceEdges workpieceEdges = {1, 2, 3, 4, 5};
+    G54 g54 = {6, 7, 8};                // определяем структуру с координатами точки G54
+};
+
+G54Finder g54f;             // имплементим класс полуавтоматического поиска точки G54
+
+
 class CenterFinder {
 public:
   // функция начинает автоматический поиск центра заготовки прямоугольной формы
@@ -2527,6 +2629,8 @@ void loop() {
       centerFinder.startCenterOutRect();    // начинаем автоматический поиск центра заготовки
     } else if (digitalRead(pinGoChangePoint)) {
       aMove.moveXToolChange(changeP.changePointX);    // переходим к точке смены инструмента по X
+    } else if (digitalRead(startSearchG54Rectangle)) {
+      g54f.searchG54Start();                // начинаем полуавтоматический поиск G54 прямоугольной заготовки
     }
   }
 }
