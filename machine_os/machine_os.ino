@@ -152,8 +152,8 @@ const uint8_t NINE  = 57;
 // константы направления движения для автоматических перемещений
 const char A_RIGHT      = 'r';
 const char A_LEFT       = 'l';
-const char A_FORWARD    = 'f';
-const char A_BACK       = 'b';
+const char A_FORWARD    = 'f';      // к оператору
+const char A_BACK       = 'b';      // от оператора
 const char A_UP         = 't';
 const char A_DOWN       = 'd';
 // константы переключения между подачей и ускорунным перемещением
@@ -2059,6 +2059,8 @@ class G54Finder
 private:
     // скорость движения шпинделя в момент поиска G54 (в миллиметрах в секунду)
     const uint16_t searchSpeed = 800;
+    // скорость отвода шпинделя после касания датчика (в миллиметрах в секунду)
+    const uint16_t retractSpeed = 800;
     // длительность паузы после срабатывания датчика касания (в миллисекундах)
     const uint16_t pauseDuration = 3000;
     // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
@@ -2066,7 +2068,8 @@ private:
     // расстояние отвода датчика от стенки после касания в миллиметрах
     const uint8_t distRetraction = 5;
     // расстояние отвода датчика от стенки после касания в шагах двигателя
-    const uint32_t retractionSteps = stepsInMm.xy * distRetraction;
+    const uint16_t retractionStepsXY = stepsInMm.xy * distRetraction;
+    const uint16_t retractionStepsZ  = stepsInMm.z  * distRetraction;
     // определение структуры с координатами краев заготовки
     WorkpieceEdges workpieceEdges = {0, 0, 0, 0, 0};
     // определяем структуру с координатами точки G54
@@ -2084,34 +2087,8 @@ public:
                 // cлушаем нажатия кнопок перемещения по осям:
                 if (digitalRead(pinToLeft))
                 {
-                    // настраиваем двигатели для движения влево
-                    aMove.setMoveParam(AT_FEED, searchSpeed, A_LEFT);
-                    // пока нажата кнопка "влево"
-                    while (digitalRead(pinToLeft))
-                    {
-                        // делаем шаг влево
-                        aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-                        // слушаем датчик касания
-                        if (!digitalRead(pinTouchProbe))
-                        {
-                            // записываем текущую позищию по X как координату правой стенки заготовки
-                            workpieceEdges.rightSide = machinePosition.getPositionX();
-                            // отодвигаем шпиндель немного вправо отстенки
-                            // настраиваем двигатели для движения вправо
-                            aMove.setMoveParam(AT_FEED, searchSpeed, A_RIGHT);
-                            for (uint16_t i = 0; i < retractionSteps; i++)
-                            {
-                                // делаем шаг вправо
-                                aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-                            }
-                            // ждем немного, пока оператор будет отпускать кнопку движения,
-                            // чтобы шпиндель снова не поехал в заготовку
-                            delay(pauseDuration);
-                            Serial.print("workpieceEdges.rightSide: ");
-                            Serial.println(workpieceEdges.rightSide);
-                            break;  // заканчиваем слушать нажатую кнопку "влево"
-                        }
-                    }
+                    // двигаем шпиндель влево и одновременно слушаем датчик касания
+                    searchRightSide();
                 }
                 else if (digitalRead(pinToRight))
                 {
@@ -2158,6 +2135,68 @@ public:
         else
         {
             return false;   // выполнение программы вернется обратно в Main()
+        }
+    }
+
+    void toRetract(const char& dirRetract)
+    {
+        // настраиваем двигатели для движения
+        aMove.setMoveParam(AT_FEED, retractSpeed, dirRetract);
+
+        // отвод шпинделя запрошен по оси X
+        if (dirRetract == A_RIGHT || dirRetract == A_LEFT)
+        {
+            // двигаем шпиндель по оси X в направлении dirRetract на расстояние retractionSteps
+            for (uint16_t i = 0; i < retractionStepsXY; i++)
+            {
+                aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+            }
+        }
+        // отвод шпинделя запрошен по оси Y
+        else if (dirRetract == A_FORWARD || dirRetract == A_BACK)
+        {
+            // двигаем шпиндель по оси Y в направлении dirRetract на расстояние retractionSteps
+            for (uint16_t i = 0; i < retractionStepsXY; i++)
+            {
+                aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+            }
+        }
+        // отвод шпинделя запрошен по оси Z
+        else if (dirRetract == A_UP)
+        {
+            // двигаем шпиндель по оси Z в направлении dirRetract (по сути, отвод только вверх)
+            // на расстояние retractionSteps
+            for (uint16_t i = 0; i < retractionStepsZ; i++)
+            {
+                aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+            }
+        }
+        // ждем немного, пока оператор будет отпускать кнопку движения,
+        // чтобы шпиндель снова не поехал в заготовку
+        delay(pauseDuration);
+    }
+
+    void searchRightSide()
+    {
+        // настраиваем двигатели для движения влево
+        aMove.setMoveParam(AT_FEED, searchSpeed, A_LEFT);
+        // пока нажата кнопка "влево"
+        while (digitalRead(pinToLeft))
+        {
+            // делаем шаг влево
+            aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+            // слушаем датчик касания
+            if (!digitalRead(pinTouchProbe))
+            {
+                // датчик касания нашел правую стенку
+                // записываем текущую позищию по X как координату правой стенки заготовки
+                workpieceEdges.rightSide = machinePosition.getPositionX();
+                // отодвигаем шпиндель немного вправо отстенки
+                toRetract(A_RIGHT);
+                Serial.print("workpieceEdges.rightSide: ");
+                Serial.println(workpieceEdges.rightSide);
+                break;  // заканчиваем слушать нажатую кнопку "влево"
+            }
         }
     }
 };
