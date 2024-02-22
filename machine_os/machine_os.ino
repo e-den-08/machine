@@ -53,12 +53,12 @@ String fileName = "do_now.ncm";
 #define pinFiSpeed 26
 #define pinSeSpeed 24
 #define pinThSpeed 22
-#define pinToLeft 31            // кнопки движения на пульте управления
-#define pinToRight 33
-#define pinToForward 27
-#define pinToBack 29
-#define pinToTop 25
-#define pinToBottom 23
+const uint8_t pinToLeft    = 31;   // кнопки движения на пульте управления
+const uint8_t pinToRight   = 33;
+const uint8_t pinToForward = 27;
+const uint8_t pinToBack    = 29;
+const uint8_t pinToTop     = 25;
+const uint8_t pinToBottom  = 23;
 
 // концевики - контроль рабочей зоны станка
 #define pinEnTuning 30          // пин, включение режима ограничения выхода за рабочую зону
@@ -67,9 +67,9 @@ String fileName = "do_now.ncm";
 #define pinLimitSwitchZ 38
 
 // выход в ноль координат ЗАГОТОВКИ, поиск центра заготовки
-#define pinOutRect 41           // пин, старт процедуры поиска центра заготовки - прямоугольник, снаружи
-#define pinTouchProbe 36        // пин, снимает показания с датчика 3D Touch Probe
-#define startSearchG54Rectangle 39 // тумблер, старт поиска нулевой точки заготовки в полуавтоматическом режиме
+const uint8_t pinOutRect = 41;              // пин, старт процедуры поиска центра заготовки - прямоугольник, снаружи
+const uint8_t pinTouchProbe = 36;           // пин, снимает показания с датчика 3D Touch Probe
+const uint8_t startSearchG54Rectangle = 39; // тумблер, старт поиска нулевой точки заготовки в полуавтоматическом режиме
 
 #define left LOW                           // маска направлления движения по осям HIGH / LOW
 #define right HIGH
@@ -387,25 +387,25 @@ class AutomaticMove {
         gSpeed = 0;                 // просто устанавливаем ускоренное перемещение и всё
     }
 
-    if (direction == 'd') {
+    if (direction == A_DOWN) {
         zDir = bottomFlag;                  // устанавливаем флаг направления движения "Вниз"
         digitalWrite(pinDirZ, bottom);      // устанавливаем значение пина, соответствующее данному направлению
-    } else if (direction == 't') {
+    } else if (direction == A_UP) {
         zDir = zDir = topFlag;              // устанавливаем флаг направления движения "Вверх"
         digitalWrite(pinDirZ, top);
-    } else if (direction == 'l') {
+    } else if (direction == A_LEFT) {
         xDir = leftFlag;                    // устанавливаем флаг направления "влево"
         digitalWrite(pinDirX1, left);       // устанавливаем значение пинов, соответствующее данному направлению
         digitalWrite(pinDirX2, left);
-    } else if (direction == 'r') {
+    } else if (direction == A_RIGHT) {
         xDir = rightFlag;                   // устанавливаем флаг направления "вправо"
         digitalWrite(pinDirX1, right);      // устанавливаем значения пинов направления "вправо"
         digitalWrite(pinDirX2, right);
-    } else if (direction == 'f') {
+    } else if (direction == A_FORWARD) {
         yDir = forwardFlag;                 // устанавливаем флаг направления "вперед"
         digitalWrite(pinDirY1, forward);    // устанавливаем значение пинов, соответствующее данному направлению
         digitalWrite(pinDirY2, forward);
-    } else if (direction == 'b') {
+    } else if (direction == A_BACK) {
         yDir = backFlag;                    // устанавливаем флаг направления "назад"
         digitalWrite(pinDirY1, back);
         digitalWrite(pinDirY2, back);
@@ -2038,11 +2038,11 @@ struct G54
 // стркутура с координатами краев заготовки
 struct WorkpieceEdges
 {
-    uint32_t topPoint;                  // координата верха заготовки (по оси Z)
-    uint32_t leftPoint;                 // координата левой стенки заготовки (по оси X)
-    uint32_t rightPoint;                // координата правой стенки заготовки (по оси X)
-    uint32_t backPoint;                 // координата задней стенки заготовки (ось Y)
-    uint32_t forwardPoint;              // координата передней стенки заготовки (ось Y)
+    uint32_t upperSide;             // координата верха заготовки (по оси Z)
+    uint32_t leftSide;              // координата левой стенки заготовки (по оси X)
+    uint32_t rightSide;             // координата правой стенки заготовки (по оси X)
+    uint32_t backSide;              // координата задней стенки заготовки (ось Y)
+    uint32_t frontSide;             // координата передней стенки заготовки (ось Y)
 };
 
 // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
@@ -2056,43 +2056,85 @@ struct StepsInMm
 // класс описывает поиск нулевой точки заготовки
 class G54Finder
 {
+private:
+    // скорость движения шпинделя в момент поиска G54 (в миллиметрах в секунду)
+    const uint16_t searchSpeed = 800;
+    // длительность паузы после срабатывания датчика касания (в миллисекундах)
+    const uint16_t pauseDuration = 1000;
+    // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
+    StepsInMm stepsInMm;
+    // расстояние отвода датчика от стенки после касания в миллиметрах
+    const uint8_t distRetraction = 5;
+    // расстояние отвода датчика от стенки после касания в шагах двигателя
+    const uint32_t retractionSteps = stepsInMm.xy * distRetraction;
+    // определение структуры с координатами краев заготовки
+    WorkpieceEdges workpieceEdges = {0, 0, 0, 0, 0};
+    // определяем структуру с координатами точки G54
+    G54 g54 = {0, 0, 0};
+
 public:
     void searchG54Start()
     {
         // исключаем дребезг контактов
         if (contactDebouncing())
         {
-            static bool counter;
-            counter = true;
             // находимся в режиме поска G54 пока включен тумблер startSearchG54Rectangle
             while (digitalRead(startSearchG54Rectangle))
             {
-                if (counter)
+                // cлушаем нажатия кнопок перемещения по осям:
+                if (digitalRead(pinToLeft))
                 {
-                    Serial.print("stepsInMm.xy: ");
-                    Serial.println(stepsInMm.xy);
-                    Serial.print("stepsInMm.z: ");
-                    Serial.println(stepsInMm.z);
-                    Serial.print("WorkpieceEdges.topPoint: ");
-                    Serial.println(workpieceEdges.topPoint);
-                    Serial.print("WorkpieceEdges.leftPoint: ");
-                    Serial.println(workpieceEdges.leftPoint);
-                    Serial.print("WorkpieceEdges.rightPoint: ");
-                    Serial.println(workpieceEdges.rightPoint);
-                    Serial.print("WorkpieceEdges.backPoint: ");
-                    Serial.println(workpieceEdges.backPoint);
-                    Serial.print("WorkpieceEdges.forwardPoint: ");
-                    Serial.println(workpieceEdges.forwardPoint);
-                    Serial.print("g54.x: ");
-                    Serial.println(g54.x);
-                    Serial.print("g54.y: ");
-                    Serial.println(g54.y);
-                    Serial.print("g54.z: ");
-                    Serial.println(g54.z);
-                    counter = false;
+                    // настраиваем двигатели для движения влево
+                    aMove.setMoveParam(AT_FEED, searchSpeed, A_LEFT);
+                    // пока нажата кнопка "влево"
+                    while (digitalRead(pinToLeft))
+                    {
+                        // делаем шаг влево
+                        aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+                        // слушаем датчик касания
+                        if (!digitalRead(pinTouchProbe))
+                        {
+                            // записываем текущую позищию по X как координату правой стенки заготовки
+                            workpieceEdges.rightSide = machinePosition.getPositionX();
+                            break;  // заканчиваем слушать нажатую кнопку "влево"
+                        }
+                    }
+                    // отодвигаем шпиндель немного вправо отстенки
+                    // настраиваем двигатели для движения вправо
+                    aMove.setMoveParam(AT_FEED, searchSpeed, A_RIGHT);
+                    for (uint16_t i = 0; i < retractionSteps; i++)
+                    {
+                        // делаем шаг вправо
+                        aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+                    }
+                    // ждем немного, пока оператор будет отпускать кнопку движения,
+                    // чтобы шпиндель снова не поехал в заготовку
+                    delay(pauseDuration);
+
+                    Serial.print("workpieceEdges.rightSide: ");
+                    Serial.println(workpieceEdges.rightSide);
+                }
+                else if (digitalRead(pinToRight))
+                {
+
+                }
+                else if (digitalRead(pinToForward))
+                {
+
+                }
+                else if (digitalRead(pinToBack))
+                {
+
+                }
+                else if (digitalRead(pinToTop))
+                {
+
+                }
+                else if (digitalRead(pinToBottom))
+                {
+
                 }
             }
-            Serial.println("searcing G54 is finished");
             // когда тумблер отключился:
             //      вычисляем координаты точки G54
             //      записываем эти координаты в соответствуюущий объект
@@ -2119,13 +2161,6 @@ public:
             return false;   // выполнение программы вернется обратно в Main()
         }
     }
-
-private:
-    StepsInMm stepsInMm;                // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
-    const uint32_t retraction = stepsInMm.xy * 2;    // расстояние отвода датчика от стенки после касания
-    // определение структуры с координатами краев заготовки
-    WorkpieceEdges workpieceEdges = {1, 2, 3, 4, 5};
-    G54 g54 = {6, 7, 8};                // определяем структуру с координатами точки G54
 };
 
 G54Finder g54f;             // имплементим класс полуавтоматического поиска точки G54
