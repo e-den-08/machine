@@ -2052,30 +2052,42 @@ struct StepsInMm
     const uint16_t z = 800;        // при 1/8 шага в 1мм движения по оси Z 800 импульсов
 };
 
+// структура - расстояние отвода датчика от стенки заготовки после касания датчика (в шагах)
+struct RetractionSteps
+{
+    uint16_t xy;
+    uint16_t z;
+};
+
 
 // класс описывает поиск нулевой точки заготовки
 class G54Finder
 {
 private:
     // скорость движения шпинделя в момент поиска G54 (в миллиметрах в секунду)
-    const uint16_t searchSpeed = 800;
+    const uint16_t searchSpeed;
     // скорость отвода шпинделя после касания датчика (в миллиметрах в секунду)
-    const uint16_t retractSpeed = 800;
+    const uint16_t retractSpeed;
     // длительность паузы после срабатывания датчика касания (в миллисекундах)
-    const uint16_t pauseDuration = 3000;
+    const uint16_t pauseDuration;
     // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
     StepsInMm stepsInMm;
     // расстояние отвода датчика от стенки после касания в миллиметрах
-    const uint8_t distRetraction = 5;
+    const uint8_t distRetraction;
     // расстояние отвода датчика от стенки после касания в шагах двигателя
-    const uint16_t retractionStepsXY = stepsInMm.xy * distRetraction;
-    const uint16_t retractionStepsZ  = stepsInMm.z  * distRetraction;
+    RetractionSteps retractionSteps =
+    {stepsInMm.xy * distRetraction, stepsInMm.z  * distRetraction};
+
     // определение структуры с координатами краев заготовки
     WorkpieceEdges workpieceEdges = {0, 0, 0, 0, 0};
     // определяем структуру с координатами точки G54
     G54 g54 = {0, 0, 0};
 
 public:
+    // конструктор класса
+    G54Finder() :
+    searchSpeed(800), retractSpeed(800), pauseDuration(3000), distRetraction(5)
+    {}
     void searchG54Start()
     {
         // исключаем дребезг контактов
@@ -2147,7 +2159,7 @@ public:
         if (dirRetract == A_RIGHT || dirRetract == A_LEFT)
         {
             // двигаем шпиндель по оси X в направлении dirRetract на расстояние retractionSteps
-            for (uint16_t i = 0; i < retractionStepsXY; i++)
+            for (uint16_t i = 0; i < retractionSteps.xy; i++)
             {
                 aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
             }
@@ -2156,7 +2168,7 @@ public:
         else if (dirRetract == A_FORWARD || dirRetract == A_BACK)
         {
             // двигаем шпиндель по оси Y в направлении dirRetract на расстояние retractionSteps
-            for (uint16_t i = 0; i < retractionStepsXY; i++)
+            for (uint16_t i = 0; i < retractionSteps.xy; i++)
             {
                 aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
             }
@@ -2166,7 +2178,7 @@ public:
         {
             // двигаем шпиндель по оси Z в направлении dirRetract (по сути, отвод только вверх)
             // на расстояние retractionSteps
-            for (uint16_t i = 0; i < retractionStepsZ; i++)
+            for (uint16_t i = 0; i < retractionSteps.z; i++)
             {
                 aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
             }
