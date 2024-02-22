@@ -2053,10 +2053,11 @@ public:
         // исключаем дребезг контактов
         if (contactDebouncing())
         {
+            static bool counter;
+            counter = true;
             // находимся в режиме поска G54 пока включен тумблер startSearchG54Rectangle
             while (digitalRead(startSearchG54Rectangle))
             {
-                static bool counter = true;
                 if (counter)
                 {
                     Serial.print("stepsInMm.xy: ");
@@ -2079,6 +2080,7 @@ public:
                     Serial.println(g54.y);
                     Serial.print("g54.z: ");
                     Serial.println(g54.z);
+                    counter = false;
                 }
             }
             Serial.println("searcing G54 is finished");
