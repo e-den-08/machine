@@ -2060,7 +2060,7 @@ private:
     // скорость движения шпинделя в момент поиска G54 (в миллиметрах в секунду)
     const uint16_t searchSpeed = 800;
     // длительность паузы после срабатывания датчика касания (в миллисекундах)
-    const uint16_t pauseDuration = 1000;
+    const uint16_t pauseDuration = 3000;
     // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
     StepsInMm stepsInMm;
     // расстояние отвода датчика от стенки после касания в миллиметрах
@@ -2096,23 +2096,22 @@ public:
                         {
                             // записываем текущую позищию по X как координату правой стенки заготовки
                             workpieceEdges.rightSide = machinePosition.getPositionX();
+                            // отодвигаем шпиндель немного вправо отстенки
+                            // настраиваем двигатели для движения вправо
+                            aMove.setMoveParam(AT_FEED, searchSpeed, A_RIGHT);
+                            for (uint16_t i = 0; i < retractionSteps; i++)
+                            {
+                                // делаем шаг вправо
+                                aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+                            }
+                            // ждем немного, пока оператор будет отпускать кнопку движения,
+                            // чтобы шпиндель снова не поехал в заготовку
+                            delay(pauseDuration);
+                            Serial.print("workpieceEdges.rightSide: ");
+                            Serial.println(workpieceEdges.rightSide);
                             break;  // заканчиваем слушать нажатую кнопку "влево"
                         }
                     }
-                    // отодвигаем шпиндель немного вправо отстенки
-                    // настраиваем двигатели для движения вправо
-                    aMove.setMoveParam(AT_FEED, searchSpeed, A_RIGHT);
-                    for (uint16_t i = 0; i < retractionSteps; i++)
-                    {
-                        // делаем шаг вправо
-                        aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-                    }
-                    // ждем немного, пока оператор будет отпускать кнопку движения,
-                    // чтобы шпиндель снова не поехал в заготовку
-                    delay(pauseDuration);
-
-                    Serial.print("workpieceEdges.rightSide: ");
-                    Serial.println(workpieceEdges.rightSide);
                 }
                 else if (digitalRead(pinToRight))
                 {
