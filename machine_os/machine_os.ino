@@ -2010,7 +2010,7 @@ void startProgram() {
       read_line_sd();             // читаем строку из файла на флешке и парсим её
       defineDirection();          // устанавливаем направление движения по всем осям
       sfp.sfpFrameProcessing();   // отрабатываем шаги
-      report();                   // мониторим результаты работы программы на экране компа
+      // report();                   // мониторим результаты работы программы на экране компа
       xStepsDone = 0;             // обнуляем количество выполненных шагов в текущем кадре
       yStepsDone = 0;
       zStepsDone = 0;
@@ -2029,11 +2029,11 @@ struct G54
 // стркутура с координатами краев заготовки
 struct WorkpieceEdges
 {
-    uint32_t top;                  // координата верха заготовки (по оси Z)
-    uint32_t left;                 // координата левой стенки заготовки (по оси X)
-    uint32_t right;                // координата правой стенки заготовки (по оси X)
-    uint32_t back;                 // координата задней стенки заготовки (ось Y)
-    uint32_t forward;              // координата передней стенки заготовки (ось Y)
+    uint32_t topPoint;                  // координата верха заготовки (по оси Z)
+    uint32_t leftPoint;                 // координата левой стенки заготовки (по оси X)
+    uint32_t rightPoint;                // координата правой стенки заготовки (по оси X)
+    uint32_t backPoint;                 // координата задней стенки заготовки (ось Y)
+    uint32_t forwardPoint;              // координата передней стенки заготовки (ось Y)
 };
 
 // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
@@ -2054,31 +2054,31 @@ public:
         if (contactDebouncing())
         {
             // находимся в режиме поска G54 пока включен тумблер startSearchG54Rectangle
-            while ()
+            while (digitalRead(startSearchG54Rectangle))
             {
                 static bool counter = true;
                 if (counter)
                 {
                     Serial.print("stepsInMm.xy: ");
-                    serial.println(stepsInMm.xy);
+                    Serial.println(stepsInMm.xy);
                     Serial.print("stepsInMm.z: ");
-                    serial.println(stepsInMm.z);
-                    Serial.print("WorkpieceEdges.top: ");
-                    serial.println(workpieceEdges.top);
-                    Serial.print("WorkpieceEdges.left: ");
-                    serial.println(workpieceEdges.left);
-                    Serial.print("WorkpieceEdges.right: ");
-                    serial.println(workpieceEdges.right);
-                    Serial.print("WorkpieceEdges.back: ");
-                    serial.println(workpieceEdges.back);
-                    Serial.print("WorkpieceEdges.forward: ");
-                    serial.println(workpieceEdges.forward);
+                    Serial.println(stepsInMm.z);
+                    Serial.print("WorkpieceEdges.topPoint: ");
+                    Serial.println(workpieceEdges.topPoint);
+                    Serial.print("WorkpieceEdges.leftPoint: ");
+                    Serial.println(workpieceEdges.leftPoint);
+                    Serial.print("WorkpieceEdges.rightPoint: ");
+                    Serial.println(workpieceEdges.rightPoint);
+                    Serial.print("WorkpieceEdges.backPoint: ");
+                    Serial.println(workpieceEdges.backPoint);
+                    Serial.print("WorkpieceEdges.forwardPoint: ");
+                    Serial.println(workpieceEdges.forwardPoint);
                     Serial.print("g54.x: ");
-                    serial.println(g54.x);
+                    Serial.println(g54.x);
                     Serial.print("g54.y: ");
-                    serial.println(g54.y);
+                    Serial.println(g54.y);
                     Serial.print("g54.z: ");
-                    serial.println(g54.z);
+                    Serial.println(g54.z);
                 }
             }
             Serial.println("searcing G54 is finished");
@@ -2110,8 +2110,8 @@ public:
     }
 
 private:
-    const uint32_t retraction = stepsInMmXY * 2;    // расстояние отвода датчика от стенки после касания
     StepsInMm stepsInMm;                // структура с количеством шагов в одном миллиметре по осям X, Y и отдельно Z
+    const uint32_t retraction = stepsInMm.xy * 2;    // расстояние отвода датчика от стенки после касания
     // определение структуры с координатами краев заготовки
     WorkpieceEdges workpieceEdges = {1, 2, 3, 4, 5};
     G54 g54 = {6, 7, 8};                // определяем структуру с координатами точки G54
