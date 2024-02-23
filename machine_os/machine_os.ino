@@ -2104,23 +2104,28 @@ public:
                 }
                 else if (digitalRead(pinToRight))
                 {
-
+                    // двигаем шпиндель вправо и слушаем датчик касания
+                    searchLeftSide();
                 }
                 else if (digitalRead(pinToForward))
                 {
-
+                    // двигаем шпиндель вперед (к оператору) и слушаем датчик касания
+                    searchBackSide();
                 }
                 else if (digitalRead(pinToBack))
                 {
-
-                }
-                else if (digitalRead(pinToTop))
-                {
-
+                    // двигаем шпиндель назад (от оператора) и слушаем датчик касания
+                    searchFrontSide();
                 }
                 else if (digitalRead(pinToBottom))
                 {
-
+                    // двигаем шпиндель вниз и слушаем датчик касания
+                    searchUpperSide();
+                }
+                else if (digitalRead(pinToTop))
+                {
+                    // просто двигаем шпиндель вверх
+                    simpleLiftUpSpindle();
                 }
             }
             // когда тумблер отключился:
@@ -2150,6 +2155,7 @@ public:
         }
     }
 
+    // метод отодвигает шпиндель от стенки заготовки после касания датчиком
     void toRetract(const char& dirRetract)
     {
         // настраиваем двигатели для движения
@@ -2188,6 +2194,7 @@ public:
         delay(pauseDuration);
     }
 
+    // метод ищет правую сторону заготовки
     void searchRightSide()
     {
         // настраиваем двигатели для движения влево
@@ -2205,10 +2212,126 @@ public:
                 workpieceEdges.rightSide = machinePosition.getPositionX();
                 // отодвигаем шпиндель немного вправо отстенки
                 toRetract(A_RIGHT);
-                Serial.print("workpieceEdges.rightSide: ");
+                Serial.print("rightSide: ");
                 Serial.println(workpieceEdges.rightSide);
                 break;  // заканчиваем слушать нажатую кнопку "влево"
             }
+        }
+    }
+
+    // метод ищет левую сторону заготовки
+    void searchLeftSide()
+    {
+        // настраиваем двигатели для движения вправо
+        aMove.setMoveParam(AT_FEED, searchSpeed, A_RIGHT);
+        // пока нажата кнопка "вправо"
+        while (digitalRead(pinToRight))
+        {
+            // делаем шаг вправо
+            aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+            // слушаем датчик касания
+            if (!digitalRead(pinTouchProbe))
+            {
+                // датчик касания нашел левую стенку
+                // записываем текущую позищию по X как координату левой стенки заготовки
+                workpieceEdges.leftSide = machinePosition.getPositionX();
+                // отодвигаем шпиндель немного левее от стенки
+                toRetract(A_LEFT);
+                Serial.print("leftSide: ");
+                Serial.println(workpieceEdges.leftSide);
+                break;  // заканчиваем слушать нажатую кнопку "вправо"
+            }
+        }
+    }
+
+    // метод ищет переднюю сторону заготовки
+    void searchFrontSide()
+    {
+        // настраиваем двигатели для движения назад (от оператора)
+        aMove.setMoveParam(AT_FEED, searchSpeed, A_BACK);
+        // пока нажата кнопка "назад"
+        while (digitalRead(pinToBack))
+        {
+            // делаем шаг назад
+            aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+            // слушаем датчик касания
+            if (!digitalRead(pinTouchProbe))
+            {
+                // датчик касания нашел переднюю стенку
+                // записываем текущую позищию по Y как координату передней стенки заготовки
+                workpieceEdges.frontSide = machinePosition.getPositionY();
+                // немного отодвигаем шпиндель от стенки
+                toRetract(A_FORWARD);
+                Serial.print("frontSide: ");
+                Serial.println(workpieceEdges.frontSide);
+                break;  // заканчиваем слушать нажатую кнопку "назад"
+            }
+        }
+    }
+
+    // метод ищет заднюю сторону заготовки
+    void searchBackSide()
+    {
+        // настраиваем двигатели для движения вперед (к оператору)
+        aMove.setMoveParam(AT_FEED, searchSpeed, A_FORWARD);
+        // пока нажата кнопка "вперед"
+        while (digitalRead(pinToForward))
+        {
+            // делаем шаг вперед
+            aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+            // слушаем датчик касания
+            if (!digitalRead(pinTouchProbe))
+            {
+                // датчик касания нашел заднюю стенку
+                // записываем текущую позищию по Y как координату задней стенки заготовки
+                workpieceEdges.backSide = machinePosition.getPositionY();
+                // немного отодвигаем шпиндель от стенки
+                toRetract(A_BACK);
+                Serial.print("backSide: ");
+                Serial.println(workpieceEdges.backSide);
+                break;  // заканчиваем слушать нажатую кнопку "вперед"
+            }
+        }
+    }
+
+    // метод ищет верхнюю сторону заготовки
+    void searchUpperSide()
+    {
+        // настраиваем двигатели для движения вниз
+        aMove.setMoveParam(AT_FEED, searchSpeed, A_DOWN);
+        // пока нажата кнопка "вниз"
+        while (digitalRead(pinToBottom))
+        {
+            // делаем шаг вниз
+            aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+            // слушаем датчик касания
+            if (!digitalRead(pinTouchProbe))
+            {
+                // датчик касания нашел верхнюю стенку заготовки
+                // записываем текущую позищию по Z как координату верхней стенки заготовки
+                workpieceEdges.upperSide = machinePosition.getPositionZ();
+                // немного приподнимаем шпиндель над заготовкой
+                toRetract(A_UP);
+                Serial.print("upperSide: ");
+                Serial.println(workpieceEdges.upperSide);
+                break;  // заканчиваем слушать нажатую кнопку "вниз"
+            }
+        }
+    }
+
+    // метод просто поднимает шпиндель вверх (находясь в режиме поиска G54 - то есть
+    // пока включен тумблер этого режима)
+    // этот метод нужен, потому что в режиме поиска G54 обычные передвижения
+    // шпиндели недоступны
+    void simpleLiftUpSpindle()
+    {
+        // настраиваем двигатели для движения вверх
+        aMove.setMoveParam(AT_FEED, searchSpeed, A_UP);
+        // пока нажата кнопка "вверх"
+        while (digitalRead(pinToTop))
+        {
+            // делаем шаг вверх
+            aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
         }
     }
 };
