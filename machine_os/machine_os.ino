@@ -88,6 +88,8 @@ bool xDir = false;                         // флаг хранит направ
 bool yDir = false;                         // true - вперед, false - назад
 bool zDir = false;                         // true - вверх, false - вниз
 
+const uint32_t widthXAxis = 132000;        // ширина оси X в шагах
+const uint32_t lengthYAxis = 98000;        // длина оси Y в шагах
 const uint32_t zDistance = 65600;          // длина оси Z
 const uint16_t spacerHeight = 4000;        // высота проставки в шагах для установки референтной точки. 4000 шагов - это 5мм.
 
@@ -1177,8 +1179,6 @@ class ManualControl {     // класс ручного управления пе
   void axisMovement (uint16_t rotationSpeed, uint8_t pressedButton) {     // метод вращает мотор пока нажата кнопка
     uint8_t qAccel = 60;                                 // число микросекунд прибавляемое на каждом следующем шаге при разгоне
     uint16_t minSpeed = 2000;                           // скорость, с которой начинается разгон
-    uint32_t widthXAxis = 132000;                       // ширина рабочей части оси X в шагах
-    uint32_t lengthYAxis = 98000;                       // длина рабочей части оси Y в шагах
     uint8_t breakDist = 237;                            // длина тормозного пути в шагах (зависит от коэффициента замедления)
     uint8_t stopOutWorkArea = digitalRead(pinEnTuning); // проверяем, включено ли ограничение выхода за пределы рабочего пространства
 
@@ -2200,6 +2200,12 @@ public:
         // пока нажата кнопка "влево"
         while (digitalRead(pinToLeft))
         {
+            // проверяем выход шпинделя за пределы рабочей зоны станка
+            if (machinePosition.getPositionX() <= 0)
+            {
+                Serial.println("The spindle extends beyond the working area to the left");
+                break;
+            }
             // делаем шаг влево
             aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
             // слушаем датчик касания
@@ -2225,6 +2231,12 @@ public:
         // пока нажата кнопка "вправо"
         while (digitalRead(pinToRight))
         {
+            // проверяем выход шпинделя за пределы рабочей зоны станка
+            if (machinePosition.getPositionX() >= widthXAxis)
+            {
+                Serial.println("The spindle extends beyond the working area to the right");
+                break;
+            }
             // делаем шаг вправо
             aMove.moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
             // слушаем датчик касания
@@ -2250,6 +2262,12 @@ public:
         // пока нажата кнопка "назад"
         while (digitalRead(pinToBack))
         {
+            // проверяем выход шпинделя за пределы рабочей зоны станка
+            if (machinePosition.getPositionY() <= 0)
+            {
+                Serial.println("The spindle extends beyond the working area to the back");
+                break;
+            }
             // делаем шаг назад
             aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
             // слушаем датчик касания
@@ -2275,6 +2293,12 @@ public:
         // пока нажата кнопка "вперед"
         while (digitalRead(pinToForward))
         {
+            // проверяем выход шпинделя за пределы рабочей зоны станка
+            if (machinePosition.getPositionY() >= lengthYAxis)
+            {
+                Serial.println("The spindle extends beyond the working area to the forward");
+                break;
+            }
             // делаем шаг вперед
             aMove.moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
             // слушаем датчик касания
@@ -2300,6 +2324,12 @@ public:
         // пока нажата кнопка "вниз"
         while (digitalRead(pinToBottom))
         {
+            // проверяем выход шпинделя за пределы рабочей зоны станка
+            if (machinePosition.getPositionZ() <= 0)
+            {
+                Serial.println("The spindle extends beyond the working area to the down");
+                break;
+            }
             // делаем шаг вниз
             aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
             // слушаем датчик касания
@@ -2328,6 +2358,12 @@ public:
         // пока нажата кнопка "вверх"
         while (digitalRead(pinToTop))
         {
+            // проверяем выход шпинделя за пределы рабочей зоны станка
+            if (machinePosition.getPositionZ() >= zDistance)
+            {
+                Serial.println("The spindle extends beyond the working area to the up");
+                break;
+            }
             // делаем шаг вверх
             aMove.moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
         }
