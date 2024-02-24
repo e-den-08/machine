@@ -392,7 +392,7 @@ class AutomaticMove {
         zDir = bottomFlag;                  // устанавливаем флаг направления движения "Вниз"
         digitalWrite(pinDirZ, bottom);      // устанавливаем значение пина, соответствующее данному направлению
     } else if (direction == A_UP) {
-        zDir = zDir = topFlag;              // устанавливаем флаг направления движения "Вверх"
+        zDir = topFlag;                     // устанавливаем флаг направления движения "Вверх"
         digitalWrite(pinDirZ, top);
     } else if (direction == A_LEFT) {
         xDir = leftFlag;                    // устанавливаем флаг направления "влево"
