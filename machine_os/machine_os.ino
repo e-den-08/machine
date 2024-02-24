@@ -2105,12 +2105,12 @@ public:
                     // двигаем шпиндель вправо и слушаем датчик касания
                     searchLeftSide();
                 }
-                else if (digitalRead(pinToForward))
+                else if (digitalRead(pinToBack))
                 {
                     // двигаем шпиндель вперед (к оператору) и слушаем датчик касания
                     searchBackSide();
                 }
-                else if (digitalRead(pinToBack))
+                else if (digitalRead(pinToForward))
                 {
                     // двигаем шпиндель назад (от оператора) и слушаем датчик касания
                     searchFrontSide();
@@ -2260,7 +2260,7 @@ public:
         // настраиваем двигатели для движения назад (от оператора)
         aMove.setMoveParam(AT_FEED, searchSpeed, A_BACK);
         // пока нажата кнопка "назад"
-        while (digitalRead(pinToBack))
+        while (digitalRead(pinToForward))
         {
             // проверяем выход шпинделя за пределы рабочей зоны станка
             if (machinePosition.getPositionY() <= 0)
@@ -2291,7 +2291,7 @@ public:
         // настраиваем двигатели для движения вперед (к оператору)
         aMove.setMoveParam(AT_FEED, searchSpeed, A_FORWARD);
         // пока нажата кнопка "вперед"
-        while (digitalRead(pinToForward))
+        while (digitalRead(pinToBack))
         {
             // проверяем выход шпинделя за пределы рабочей зоны станка
             if (machinePosition.getPositionY() >= lengthYAxis)
