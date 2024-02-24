@@ -167,7 +167,7 @@ const int AT_FEED       = 1;
 class SpeedControl {
   public:
   const uint16_t pulsPerMm = 400;             // импульсов в одном миллиметре
-  const uint8_t durHighLevel = 8;             // длительность высокого уровня сигнала на двигателе
+  const uint8_t durHighLevel = 40;             // длительность высокого уровня сигнала на двигателе
   const float qEquilateral = 1.414;           // коэффициент увеличения длительности такта при движении по 2 осям X и Y (равносторонний треугольник)
   const float qNotEquiLateral = 1.153;        // коэффициент при движении по 2 осям с участием оси Z
   const float qThreeAxis = 1.499;             // коэффициент для 3-х осей
@@ -353,7 +353,7 @@ class AutomaticMove {
     PORTE &= ~(1 << PORTE4);              // подаем низкий уровень сигнала на первый мотор
     PORTE &= ~(1 << PORTE5);              // подаем низкий уровень сигнала на второй мотор
     delayMicroseconds(delayMoveLow);
-    machinePosition.budgeX();                           // отслеживаем передвижение в абсолютной системе координат
+    machinePosition.budgeX();             // отслеживаем передвижение в абсолютной системе координат
   }
 
   void moveY(uint16_t delayMoveHigh, uint16_t delayMoveLow) {      // метод движения по оси Y
@@ -363,7 +363,7 @@ class AutomaticMove {
     PORTG &= ~(1 << PORTG5);              // подаем низкий уровень сигнала на первый мотор
     PORTB &= ~(1 << PORTB6);              // подаем низкий уровень сигнала на второй мотор
     delayMicroseconds(delayMoveLow);
-    machinePosition.budgeY();                           // отслеживаем передвижение в абсолютной системе координат
+    machinePosition.budgeY();             // отслеживаем передвижение в абсолютной системе координат
   }
 
   void moveZ(uint16_t delayMoveHigh, uint16_t delayMoveLow) {      // метод движения по оси Z
@@ -371,7 +371,7 @@ class AutomaticMove {
     delayMicroseconds(delayMoveHigh);
     PORTH &= ~(1 << PORTH6);              // подаем низкий уровень сигнала на мотор Z
     delayMicroseconds(delayMoveLow);
-    machinePosition.budgeZ();                           // отслеживаем передвижение в абсолютной системе координат
+    machinePosition.budgeZ();             // отслеживаем передвижение в абсолютной системе координат
   }
 
   // метод устанавливает направление движения, устанавливает пины в нужное состояние
@@ -390,10 +390,12 @@ class AutomaticMove {
 
     if (direction == A_DOWN) {
         zDir = bottomFlag;                  // устанавливаем флаг направления движения "Вниз"
-        digitalWrite(pinDirZ, bottom);      // устанавливаем значение пина, соответствующее данному направлению
+        // digitalWrite(pinDirZ, bottom);      // устанавливаем значение пина, соответствующее данному направлению
+        PORTB &= ~(1 << PORTB5);
     } else if (direction == A_UP) {
         zDir = topFlag;                     // устанавливаем флаг направления движения "Вверх"
-        digitalWrite(pinDirZ, top);
+        // digitalWrite(pinDirZ, top);
+        PORTB |= 1 << PORTB5;
     } else if (direction == A_LEFT) {
         xDir = leftFlag;                    // устанавливаем флаг направления "влево"
         digitalWrite(pinDirX1, left);       // устанавливаем значение пинов, соответствующее данному направлению
@@ -419,7 +421,6 @@ class AutomaticMove {
     while (machinePosition.getPositionZ() <= zDistance ) {
         moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
     }
-    Serial.println("used new spindle rise");
   }
 
   // отодвигаем стол в крайнее дальнее положение
@@ -428,7 +429,6 @@ class AutomaticMove {
     while (machinePosition.getPositionY() > 0) {
         moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
     }
-    Serial.println("used new move along table");
   }
 
   // двигаем шпиндель по X до точки смены инструмента
@@ -447,7 +447,6 @@ class AutomaticMove {
           moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
       }
     }
-    Serial.println("used new move to Tool change");
   }
 
   // двигаем шпиндель по X до G54
@@ -465,7 +464,6 @@ class AutomaticMove {
             moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
         }
     }
-    Serial.println("used new move X to G54");
   }
 
   // двигаем шпиндель по Y до G54
@@ -483,7 +481,6 @@ class AutomaticMove {
             moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
         }
     }
-    Serial.println("used new move Y to G54");
   }
 
   // метод опускает шпиндель до касания с датчиком инструмента
@@ -498,7 +495,6 @@ class AutomaticMove {
         }
         moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
     }
-    Serial.println("used new Down Until Touch Sensor");
     return 0;
   }
 
@@ -509,7 +505,6 @@ class AutomaticMove {
     while (machinePosition.getPositionZ() > destinationPointZ) {
         moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
     }
-    Serial.println("used new lower Z to G54");
   }
   // сюда добавлять еще методы
 };
@@ -1466,8 +1461,6 @@ class ToolChangePoint {
         return GENERAL_ERROR;
     }
     toolLenDif = 0;                         // обнуляем разницу длины инструментов
-    Serial.print("changePointZ: ");
-    Serial.println(changePointZ);
     return 0;
   }
 
@@ -1900,7 +1893,7 @@ void defineDirection() {            // функция определения н�
 }
 
 void intToChar(int32_t num) {
-  tempNumChar[8] = '\0';              
+  tempNumChar[8] = '\0';
   for (int i = 8; i >= 0; i--) {
     if (i == 7) {
       tempNumChar[i] = (num % 10) + 48;
