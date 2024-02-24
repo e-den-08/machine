@@ -1466,7 +1466,8 @@ class ToolChangePoint {
         return GENERAL_ERROR;
     }
     toolLenDif = 0;                         // обнуляем разницу длины инструментов
-    Serial.println("Tool touch sensor initialized successfully!");
+    Serial.print("changePointZ: ");
+    Serial.println(changePointZ);
     return 0;
   }
 
@@ -2084,7 +2085,7 @@ private:
 public:
     // конструктор класса
     G54Finder() :
-    searchSpeed(800), retractSpeed(800), pauseDuration(3000), distRetraction(5)
+    searchSpeed(450), retractSpeed(450), pauseDuration(100), distRetraction(5)
     {}
     void searchG54Start()
     {
@@ -2254,18 +2255,18 @@ public:
         }
     }
 
-    // метод ищет переднюю сторону заготовки
-    void searchFrontSide()
+    // метод ищет заднюю сторону заготовки (дальнюю от оператора)
+    void searchBackSide()
     {
         // настраиваем двигатели для движения назад (от оператора)
         aMove.setMoveParam(AT_FEED, searchSpeed, A_BACK);
         // пока нажата кнопка "назад"
-        while (digitalRead(pinToBack))
+        while (digitalRead(pinToForward))
         {
             // проверяем выход шпинделя за пределы рабочей зоны станка
             if (machinePosition.getPositionY() <= 0)
             {
-                Serial.println("The spindle extends beyond the working area to the back");
+                Serial.println("The spindle extends beyond the working area to the forward");
                 break;
             }
             // делаем шаг назад
@@ -2275,28 +2276,28 @@ public:
             {
                 // датчик касания нашел переднюю стенку
                 // записываем текущую позищию по Y как координату передней стенки заготовки
-                workpieceEdges.frontSide = machinePosition.getPositionY();
+                workpieceEdges.backSide = machinePosition.getPositionY();
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_FORWARD);
-                Serial.print("frontSide: ");
-                Serial.println(workpieceEdges.frontSide);
+                Serial.print("backSide: ");
+                Serial.println(workpieceEdges.backSide);
                 break;  // заканчиваем слушать нажатую кнопку "назад"
             }
         }
     }
 
     // метод ищет заднюю сторону заготовки
-    void searchBackSide()
+    void searchFrontSide()
     {
         // настраиваем двигатели для движения вперед (к оператору)
         aMove.setMoveParam(AT_FEED, searchSpeed, A_FORWARD);
         // пока нажата кнопка "вперед"
-        while (digitalRead(pinToForward))
+        while (digitalRead(pinToBack))
         {
             // проверяем выход шпинделя за пределы рабочей зоны станка
             if (machinePosition.getPositionY() >= lengthYAxis)
             {
-                Serial.println("The spindle extends beyond the working area to the forward");
+                Serial.println("The spindle extends beyond the working area to the back");
                 break;
             }
             // делаем шаг вперед
@@ -2306,11 +2307,11 @@ public:
             {
                 // датчик касания нашел заднюю стенку
                 // записываем текущую позищию по Y как координату задней стенки заготовки
-                workpieceEdges.backSide = machinePosition.getPositionY();
+                workpieceEdges.frontSide = machinePosition.getPositionY();
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_BACK);
-                Serial.print("backSide: ");
-                Serial.println(workpieceEdges.backSide);
+                Serial.print("frontSide: ");
+                Serial.println(workpieceEdges.frontSide);
                 break;  // заканчиваем слушать нажатую кнопку "вперед"
             }
         }
