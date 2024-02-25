@@ -2074,6 +2074,11 @@ private:
     WorkpieceEdges workpieceEdges = {0, 0, 0, 0, 0};
     // определяем структуру с координатами точки G54
     G54 g54 = {0, 0, 0};
+    // радиус шарика щупа датчика в миллиметрах
+    const float mmBallRadius = 1.0;
+    // радиус шарика щупа датчика в шагах
+    uint16_t stepsBallRadiusXY = mmBallRadius * stepsInMm.xy;
+    uint16_t stepsBallRadiusZ  = mmBallRadius * stepsInMm.z;
 
 public:
     // конструктор класса
@@ -2085,6 +2090,17 @@ public:
         // исключаем дребезг контактов
         if (contactDebouncing())
         {
+            // если это повторное включение режима - обнуляем все предыдущие показания
+            // обнуляем координаты краев заготовки
+            workpieceEdges.leftSide  = 0;
+            workpieceEdges.rightSide = 0;
+            workpieceEdges.upperSide = 0;
+            workpieceEdges.backSide  = 0;
+            workpieceEdges.frontSide = 0;
+            // обнуляем координаты точки G54
+            g54.x = 0;
+            g54.y = 0;
+            g54.z = 0;
             // находимся в режиме поска G54 пока включен тумблер startSearchG54Rectangle
             while (digitalRead(startSearchG54Rectangle))
             {
@@ -2124,6 +2140,7 @@ public:
             //      вычисляем координаты точки G54
             //      записываем эти координаты в соответствуюущий объект
             //      перемещаем шпиндель в G54 c помощью refPoint.goToRPoint()
+
         }
     }
 
@@ -2207,7 +2224,7 @@ public:
             {
                 // датчик касания нашел правую стенку
                 // записываем текущую позищию по X как координату правой стенки заготовки
-                workpieceEdges.rightSide = machinePosition.getPositionX();
+                workpieceEdges.rightSide = machinePosition.getPositionX() - stepsBallRadiusXY;
                 // отодвигаем шпиндель немного вправо отстенки
                 toRetract(A_RIGHT);
                 Serial.print("rightSide: ");
@@ -2238,7 +2255,7 @@ public:
             {
                 // датчик касания нашел левую стенку
                 // записываем текущую позищию по X как координату левой стенки заготовки
-                workpieceEdges.leftSide = machinePosition.getPositionX();
+                workpieceEdges.leftSide = machinePosition.getPositionX() + stepsBallRadiusXY;
                 // отодвигаем шпиндель немного левее от стенки
                 toRetract(A_LEFT);
                 Serial.print("leftSide: ");
