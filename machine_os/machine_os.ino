@@ -2161,12 +2161,69 @@ public:
 
     void setG54()
     {
+        // G54 - углы:
+        // левый верхний
         if ( workpieceEdges.leftSide  &&  workpieceEdges.backSide &&
             !workpieceEdges.rightSide && !workpieceEdges.frontSide)
         {
             rPointG54X = workpieceEdges.leftSide;
             rPointG54Y = workpieceEdges.backSide;
         }
+        // правый верхний
+        else if (!workpieceEdges.leftSide  &&  workpieceEdges.backSide &&
+                  workpieceEdges.rightSide && !workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.rightSide;
+            rPointG54Y = workpieceEdges.backSide;
+        }
+        // правый нижний
+        else if (!workpieceEdges.leftSide  && !workpieceEdges.backSide &&
+                  workpieceEdges.rightSide &&  workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.rightSide;
+            rPointG54Y = workpieceEdges.frontSide;
+        }
+        // левый нижний
+        else if ( workpieceEdges.leftSide  && !workpieceEdges.backSide &&
+                 !workpieceEdges.rightSide &&  workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.leftSide;
+            rPointG54Y = workpieceEdges.frontSide;
+        }
+        // G54 в центре рёбер:
+        // в центре левого ребра
+        else if ( workpieceEdges.leftSide  &&  workpieceEdges.backSide &&
+                 !workpieceEdges.rightSide &&  workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.leftSide;
+            rPointG54Y = workpieceEdges.frontSide +
+                         ((workpieceEdges.backSide - workpieceEdges.frontSide) / 2);
+        }
+        // в центре заднего ребра
+        else if ( workpieceEdges.leftSide  &&  workpieceEdges.backSide &&
+                  workpieceEdges.rightSide && !workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.leftSide +
+                         ((workpieceEdges.rightSide - workpieceEdges.leftSide) / 2);
+            rPointG54Y = workpieceEdges.backSide;
+        }
+        // в центре правого ребра
+        else if (!workpieceEdges.leftSide  &&  workpieceEdges.backSide &&
+                  workpieceEdges.rightSide &&  workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.rightSide;
+            rPointG54Y = workpieceEdges.frontSide +
+                         ((workpieceEdges.backSide - workpieceEdges.frontSide) / 2);
+        }
+        // в центре переднего ребра
+        else if ( workpieceEdges.leftSide  && !workpieceEdges.backSide &&
+                  workpieceEdges.rightSide &&  workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.leftSide +
+                         ((workpieceEdges.rightSide - workpieceEdges.leftSide) / 2);
+            rPointG54Y = workpieceEdges.frontSide;
+        }
+        // в центре заготовки
         else if ( workpieceEdges.leftSide  &&  workpieceEdges.backSide &&
                   workpieceEdges.rightSide &&  workpieceEdges.frontSide)
         {
