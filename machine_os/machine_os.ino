@@ -4,7 +4,6 @@
 //     0         1         2         3         десятки
 //     1234567890123456789012345678901234567     штук ()
 //     0        1         2         3            десятки
-// после конфликта
 
 #include "SPI.h"        // библиотека для работы с периферийными устройствами
 #include "SD.h"         // библиотека для работы с sd картами
@@ -2075,15 +2074,20 @@ private:
     // определяем структуру с координатами точки G54
     G54 g54 = {0, 0, 0};
     // радиус шарика щупа датчика в миллиметрах
-    const float mmBallRadius = 1.0;
+    const float mmBallRadius = 0.985;
     // радиус шарика щупа датчика в шагах
     uint16_t stepsBallRadiusXY = mmBallRadius * stepsInMm.xy;
     uint16_t stepsBallRadiusZ  = mmBallRadius * stepsInMm.z;
+    // погрешность датчика в шагах (расстояние срабатывания)
+    // найдено с параллелькой (плитка 5мм)
+    const uint16_t sensorErrorX = 30;
+    const uint16_t sensorErrorY = 26;
+    const uint16_t sensorErrorZ = 40;
 
 public:
     // конструктор класса
     G54Finder() :
-    searchSpeed(450), retractSpeed(450), pauseDuration(100), distRetraction(5)
+    searchSpeed(50), retractSpeed(180), pauseDuration(500), distRetraction(1)
     {}
     void searchG54Start()
     {
@@ -2136,6 +2140,17 @@ public:
                     simpleLiftUpSpindle();
                 }
             }
+            Serial.print("mmBallRadius: ");
+            Serial.println(mmBallRadius);
+            Serial.print("stepsBallRadius: ");
+            Serial.println(mmBallRadius * stepsInMm.xy);
+            Serial.print("length: ");
+            Serial.println(workpieceEdges.backSide -
+                           workpieceEdges.frontSide);
+            Serial.print("width: ");
+            Serial.println(workpieceEdges.rightSide -
+                           workpieceEdges.leftSide);
+            Serial.println();
             // когда тумблер отключился:
             //      вычисляем координаты точки G54
             //      записываем эти координаты в соответствуюущий объект
@@ -2224,11 +2239,9 @@ public:
             {
                 // датчик касания нашел правую стенку
                 // записываем текущую позищию по X как координату правой стенки заготовки
-                workpieceEdges.rightSide = machinePosition.getPositionX() - stepsBallRadiusXY;
+                workpieceEdges.rightSide = machinePosition.getPositionX() - stepsBallRadiusXY + sensorErrorX;
                 // отодвигаем шпиндель немного вправо отстенки
                 toRetract(A_RIGHT);
-                Serial.print("rightSide: ");
-                Serial.println(workpieceEdges.rightSide);
                 break;  // заканчиваем слушать нажатую кнопку "влево"
             }
         }
@@ -2255,11 +2268,9 @@ public:
             {
                 // датчик касания нашел левую стенку
                 // записываем текущую позищию по X как координату левой стенки заготовки
-                workpieceEdges.leftSide = machinePosition.getPositionX() + stepsBallRadiusXY;
+                workpieceEdges.leftSide = machinePosition.getPositionX() + stepsBallRadiusXY - sensorErrorX;
                 // отодвигаем шпиндель немного левее от стенки
                 toRetract(A_LEFT);
-                Serial.print("leftSide: ");
-                Serial.println(workpieceEdges.leftSide);
                 break;  // заканчиваем слушать нажатую кнопку "вправо"
             }
         }
@@ -2286,17 +2297,15 @@ public:
             {
                 // датчик касания нашел переднюю стенку
                 // записываем текущую позищию по Y как координату передней стенки заготовки
-                workpieceEdges.backSide = machinePosition.getPositionY();
+                workpieceEdges.backSide = machinePosition.getPositionY() - stepsBallRadiusXY + sensorErrorY;
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_FORWARD);
-                Serial.print("backSide: ");
-                Serial.println(workpieceEdges.backSide);
                 break;  // заканчиваем слушать нажатую кнопку "назад"
             }
         }
     }
 
-    // метод ищет заднюю сторону заготовки
+    // метод ищет переднюю сторону заготовки
     void searchFrontSide()
     {
         // настраиваем двигатели для движения вперед (к оператору)
@@ -2317,11 +2326,9 @@ public:
             {
                 // датчик касания нашел заднюю стенку
                 // записываем текущую позищию по Y как координату задней стенки заготовки
-                workpieceEdges.frontSide = machinePosition.getPositionY();
+                workpieceEdges.frontSide = machinePosition.getPositionY() + stepsBallRadiusXY - sensorErrorY;
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_BACK);
-                Serial.print("frontSide: ");
-                Serial.println(workpieceEdges.frontSide);
                 break;  // заканчиваем слушать нажатую кнопку "вперед"
             }
         }
@@ -2348,7 +2355,7 @@ public:
             {
                 // датчик касания нашел верхнюю стенку заготовки
                 // записываем текущую позищию по Z как координату верхней стенки заготовки
-                workpieceEdges.upperSide = machinePosition.getPositionZ();
+                workpieceEdges.upperSide = machinePosition.getPositionZ() + sensorErrorZ;
                 // немного приподнимаем шпиндель над заготовкой
                 toRetract(A_UP);
                 Serial.print("upperSide: ");
