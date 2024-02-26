@@ -453,8 +453,32 @@ class AutomaticMove {
     if (machinePosition.getPositionX() < rPointG54X) {
         // мы слева от g54
         setMoveParam(ACCELERATED, 0, A_RIGHT);  // конфигурируем движение вправо ускор
+        uint8_t  highLevel    = 20;
+        uint16_t autoMaxSpeed = 140 - highLevel;
+        uint16_t autoMinSpeed = 2640;
+        uint8_t  accelDist    = 250;
+        uint16_t autoCurSpeed = autoMinSpeed;
+        uint32_t pathLength = getPathLength(machinePosition.getPositionX(), rPointG54X);
+        uint32_t pathMiddle = pathLength / 2;
+
         while (machinePosition.getPositionX() < rPointG54X) {
-            moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
+            if (pathLength > pathMiddle)
+            {
+                if (autoCurSpeed > autoMaxSpeed)
+                {
+                    autoCurSpeed -= 10;
+                }
+            }
+            else
+            {
+                if (pathLength < accelDist)
+                {
+                    autoCurSpeed += 10;
+                }
+            }
+
+            moveX(highLevel,autoCurSpeed);
+            pathLength--;
         }
     } else {
         // мы справа от g54
@@ -503,6 +527,19 @@ class AutomaticMove {
     uint32_t destinationPointZ = rPointG54Z + toolLenDif + spacerHeight;
     while (machinePosition.getPositionZ() > destinationPointZ) {
         moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+    }
+  }
+
+  // метод возвращает длину пути на основании начальной и конечной позиции
+  uint32_t getPathLength(uint32_t firstPosition, uint32_t secondPosition)
+  {
+    if (firstPosition > secondPosition)
+    {
+        return firstPosition - secondPosition;
+    }
+    else
+    {
+        return secondPosition - firstPosition;
     }
   }
   // сюда добавлять еще методы
