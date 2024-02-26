@@ -1493,6 +1493,8 @@ class ReferentPoint {
     rPointG54Y = machinePosition.getPositionY();
     rPointG54Z = machinePosition.getPositionZ() - spacerHeight;
     Serial.println("G54 point is installed successfully.");
+    // пауза, чтобы в порт не летело бесконечное количество сообщений
+        delay(1000);
   }
 
   void goToRPoint() {       // метод ведет шпиндель к референтной точке
@@ -1512,6 +1514,8 @@ class ReferentPoint {
     else
     {
         Serial.println("G54 point coordinates are not set");
+        // пауза, чтобы в порт не летело бесконечное количество сообщений
+        delay(1000);
     }
   }
 };
@@ -2233,6 +2237,8 @@ public:
                          ((workpieceEdges.backSide - workpieceEdges.frontSide) / 2);
         }
         Serial.println("G54 point installed successfully!");
+        // пауза, чтобы в порт не летело бесконечное количество сообщений
+        delay(1000);
         // обнуляем все найденные стороны, чтобы можно было повторно начать поиск сторон
         workpieceEdges.leftSide  = 0;
         workpieceEdges.rightSide = 0;
