@@ -2094,17 +2094,6 @@ public:
         // исключаем дребезг контактов
         if (contactDebouncing())
         {
-            // если это повторное включение режима - обнуляем все предыдущие показания
-            // обнуляем координаты краев заготовки
-            workpieceEdges.leftSide  = 0;
-            workpieceEdges.rightSide = 0;
-            workpieceEdges.upperSide = 0;
-            workpieceEdges.backSide  = 0;
-            workpieceEdges.frontSide = 0;
-            // обнуляем координаты точки G54
-            g54.x = 0;
-            g54.y = 0;
-            g54.z = 0;
             // находимся в режиме поска G54 пока включен тумблер startSearchG54Rectangle
             while (digitalRead(startSearchG54Rectangle))
             {
@@ -2139,24 +2128,46 @@ public:
                     // просто двигаем шпиндель вверх
                     simpleLiftUpSpindle();
                 }
+                // нажата кнопка "установить точку G54"
+                else if (digitalRead(pinSetG54))
+                {
+                    // проверяем, не забыли ли мы обозначить верхнюю грань заготовки
+                    if (workpieceEdges.upperSide != 0)
+                    {
+                        // верхняя грань точки G54 всегда одинаковая, поэтому мы её присваиваем
+                        // прямо здесь и больлше к этому возвращаться не будем
+                        rPointG54Z = workpieceEdges.upperSide;
+                        // дальше, анализируем, какие стороны заготовки были найдены и на основании этих
+                        // точек решаем, в каком месте будет точки G54
+                        setG54();
+                    }
+                }
+                // нажата кнопка "перейти к точке G54"
+                else if (digitalRead(pinGoToG54))
+                {
+                    refPoint.goToRPoint();
+                }
             }
-            Serial.print("mmBallRadius: ");
-            Serial.println(mmBallRadius);
-            Serial.print("stepsBallRadius: ");
-            Serial.println(mmBallRadius * stepsInMm.xy);
-            Serial.print("length: ");
-            Serial.println(workpieceEdges.backSide -
-                           workpieceEdges.frontSide);
-            Serial.print("width: ");
-            Serial.println(workpieceEdges.rightSide -
-                           workpieceEdges.leftSide);
-            Serial.println();
-            // когда тумблер отключился:
-            //      вычисляем координаты точки G54
-            //      записываем эти координаты в соответствуюущий объект
-            //      перемещаем шпиндель в G54 c помощью refPoint.goToRPoint()
-
         }
+    }
+
+    void setG54()
+    {
+        if ( workpieceEdges.leftSide  &&  workpieceEdges.backSide &&
+            !workpieceEdges.rightSide && !workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.leftSide;
+            rPointG54Y = workpieceEdges.backSide;
+        }
+        else if ( workpieceEdges.leftSide  &&  workpieceEdges.backSide &&
+                  workpieceEdges.rightSide &&  workpieceEdges.frontSide)
+        {
+            rPointG54X = workpieceEdges.leftSide +
+                         ((workpieceEdges.rightSide - workpieceEdges.leftSide) / 2);
+            rPointG54Y = workpieceEdges.frontSide +
+                         ((workpieceEdges.backSide - workpieceEdges.frontSide) / 2);
+        }
+        Serial.println("G54 point installed successfully!");
     }
 
     bool contactDebouncing()
