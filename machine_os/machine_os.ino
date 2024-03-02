@@ -344,7 +344,21 @@ PositionTracking machinePosition;   // имплементим класс сле�
 
 // класс управляет автоматическими перемещениями по осям типа движения к референтной точке или к точке смены инструмента
 class AutomaticMove {
+  private:
+  // данные регулирующие ускорение и замедление
+  // длина такта - это сумма времени высокого и низкого сигналов (в микросекундах)
+  uint16_t minBeat = 140;       // минимальная длина такта (в микросекундах) - масимальная скорость
+  uint16_t curBeat = 0;         // длительность текущего шага
+  uint16_t maxBeat = 2600;      // максимальная длина такта в микросекундах - минимальная скорость
+  uint16_t durHigh = speedSetting.durHighLevel;     // высокий уровень сигнала хранится в объекте speedSetting
+  uint16_t aqAccel = 77;        // коэффициента ускорения и замедления
+  uint16_t brakingDistance = 250;  // длина пути торможения и разгон (в шагах)
+  uint32_t pathLength = 0;      // общая длина пути
+  uint32_t pathMiddle = 0;      // половина пути (чтобы знать, где начинать тормозить)
+
   public:
+
+
   void moveX(uint16_t delayMoveHigh, uint16_t delayMoveLow) {      // метод движения по оси X
     PORTE |= 1 << PORTE4;                 // подаем высокий уровень сигнала на первый мотор
     PORTE |= 1 << PORTE5;                 // подаем высокий уровень сигнала на второй мотор
@@ -450,42 +464,32 @@ class AutomaticMove {
 
   // двигаем шпиндель по X до G54
   void moveXToG54() {
-    if (machinePosition.getPositionX() < rPointG54X) {
-        // мы слева от g54
+    // если мы слева от g54
+    if (machinePosition.getPositionX() < rPointG54X)
+    {
         setMoveParam(ACCELERATED, 0, A_RIGHT);  // конфигурируем движение вправо ускор
-        uint8_t  highLevel    = 20;
-        uint16_t autoMaxSpeed = 140 - highLevel;
-        uint16_t autoMinSpeed = 2640;
-        uint8_t  accelDist    = 250;
-        uint16_t autoCurSpeed = autoMinSpeed;
-        uint32_t pathLength = getPathLength(machinePosition.getPositionX(), rPointG54X);
-        uint32_t pathMiddle = pathLength / 2;
-
-        while (machinePosition.getPositionX() < rPointG54X) {
-            if (pathLength > pathMiddle)
-            {
-                if (autoCurSpeed > autoMaxSpeed)
-                {
-                    autoCurSpeed -= 10;
-                }
-            }
-            else
-            {
-                if (pathLength < accelDist)
-                {
-                    autoCurSpeed += 10;
-                }
-            }
-
-            moveX(highLevel,autoCurSpeed);
-            pathLength--;
-        }
-    } else {
-        // мы справа от g54
+    }
+    // если мы справа от g54
+    else if (machinePosition.getPositionX() < rPointG54X)
+    {
         setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
-        while (machinePosition.getPositionX() > rPointG54X) {
-            moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-        }
+    }
+
+    // находим длину пути и половину длины пути
+    findPathLength(machinePosition.getPositionX(), rPointG54X);
+    // счетчик, сколько шагов уже сделано на пути к G54
+    uint32_t counter = 0;
+    // устанавливаем начальную (минимальную) скорость страгивания с места
+    curBeat = maxBeat;
+
+    while (machinePosition.getPositionX() != rPointG54X)
+    {
+        // рассчитываем скорость ускорения и замедления
+        calculateSpeed(counter);
+        // делаем шаг
+        moveX(durHigh, (curBeat - durHigh));
+        // увеличиваем счетчик сделанных шагов
+        counter++;
     }
   }
 
@@ -530,18 +534,45 @@ class AutomaticMove {
     }
   }
 
-  // метод возвращает длину пути на основании начальной и конечной позиции
-  uint32_t getPathLength(uint32_t firstPosition, uint32_t secondPosition)
+  // метод находит длину пути на основании начальной и конечной позиции
+  // а так же длину половины пути
+  void findPathLength(uint32_t firstPosition, uint32_t secondPosition)
   {
+    // находим длину пути
     if (firstPosition > secondPosition)
     {
-        return firstPosition - secondPosition;
+        pathLength = firstPosition - secondPosition;
     }
     else
     {
-        return secondPosition - firstPosition;
+        pathLength = secondPosition - firstPosition;
     }
+    // теперь находим длину половины пути
+    pathMiddle = pathLength / 2;
   }
+
+    // метод рассчитывает текущую скорость при торможении и ускорении
+    void calculateSpeed(uint32_t& counter)
+    {
+        // если мы еще в первой половине пути
+        if (counter < pathMiddle)
+        {
+            if (curBeat > minBeat)
+            {
+                curBeat = curBeat - (curBeat / aqAccel);
+            }
+        }
+        // мы уже во второй половине пути
+        else
+        {
+            // уже пришло время тормозить
+            if (counter > (pathLength - brakingDistance))
+            {
+                curBeat = curBeat - (curBeat / aqAccel);
+            }
+        }
+    }
+
   // сюда добавлять еще методы
 };
 
