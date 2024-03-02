@@ -347,7 +347,7 @@ class AutomaticMove {
   private:
   // данные регулирующие ускорение и замедление
   // длина такта - это сумма времени высокого и низкого сигналов (в микросекундах)
-  uint16_t minBeat = 140;       // минимальная длина такта (в микросекундах) - масимальная скорость
+  uint16_t minBeat = 110;       // минимальная длина такта (в микросекундах) - масимальная скорость
   uint16_t curBeat = 0;         // длительность текущего шага
   uint16_t maxBeat = 2600;      // максимальная длина такта в микросекундах - минимальная скорость
   uint16_t durHigh = speedSetting.durHighLevel;     // высокий уровень сигнала хранится в объекте speedSetting
@@ -431,16 +431,38 @@ class AutomaticMove {
   // метод поднимает шпиндель в самый верх (если шпиндель уже не находится в самом верху)
   void toRiseSpindle() {
     setMoveParam(ACCELERATED, 0, A_UP);      // конфигурируем движение вверх на ускоренном ходу
+    // находим длину пути и половину длины пути
+    findPathLength(machinePosition.getPositionZ(), zDistance);
+    // счетчик, сколько шагов уже сделано на пути к G54
+    uint32_t counter = 0;
+    // устанавливаем начальную (минимальную) скорость страгивания с места
+    curBeat = maxBeat;
     while (machinePosition.getPositionZ() <= zDistance ) {
-        moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+        // рассчитываем скорость ускорения и замедления
+        calculateSpeed(counter);
+        // делаем шаг
+        moveZ(durHigh, (curBeat - durHigh));
+        // увеличиваем счетчик сделанных шагов
+        counter++;
     }
   }
 
   // отодвигаем стол в крайнее дальнее положение
   void moveAlongTable() {
     setMoveParam(ACCELERATED, 0, A_BACK);  // конфигурируем движение стола вдаль на ускоренном
-    while (machinePosition.getPositionY() > 0) {
-        moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
+    // находим длину пути и половину длины пути
+    findPathLength(machinePosition.getPositionY(), 1);
+    // счетчик, сколько шагов уже сделано на пути к G54
+    uint32_t counter = 0;
+    // устанавливаем начальную (минимальную) скорость страгивания с места
+    curBeat = maxBeat;
+    while (machinePosition.getPositionY() >= 1) {
+        // рассчитываем скорость ускорения и замедления
+        calculateSpeed(counter);
+        // делаем шаг
+        moveY(durHigh, (curBeat - durHigh));
+        // увеличиваем счетчик сделанных шагов
+        counter++;
     }
   }
 
@@ -470,7 +492,7 @@ class AutomaticMove {
         setMoveParam(ACCELERATED, 0, A_RIGHT);  // конфигурируем движение вправо ускор
     }
     // если мы справа от g54
-    else if (machinePosition.getPositionX() < rPointG54X)
+    else if (machinePosition.getPositionX() > rPointG54X)
     {
         setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
     }
@@ -495,18 +517,32 @@ class AutomaticMove {
 
   // двигаем шпиндель по Y до G54
   void moveYToG54() {
-    if (machinePosition.getPositionY() < rPointG54Y) {
+    if (machinePosition.getPositionY() < rPointG54Y)
+    {
         // мы находимся дальше (от оператора) точки g54
         setMoveParam(ACCELERATED, 0, A_FORWARD);  // конфигурируем движение стола вперед на ускоренном
-        while (machinePosition.getPositionY() < rPointG54Y) {
-            moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
-        }
-    } else {
+    }
+    else if (machinePosition.getPositionY() > rPointG54Y)
+    {
         // мы находимся ближе к оператору, чем точка g54
         setMoveParam(ACCELERATED, 0, A_BACK);
-        while (machinePosition.getPositionY() > rPointG54Y) {
-            moveY(speedSetting.durHighLevel, speedSetting.getSpeed('y'));
-        }
+    }
+
+    // находим длину пути и половину длины пути
+    findPathLength(machinePosition.getPositionY(), rPointG54Y);
+    // счетчик, сколько шагов уже сделано на пути к G54
+    uint32_t counter = 0;
+    // устанавливаем начальную (минимальную) скорость страгивания с места
+    curBeat = maxBeat;
+
+    while (machinePosition.getPositionY() != rPointG54Y)
+    {
+        // рассчитываем скорость ускорения и замедления
+        calculateSpeed(counter);
+        // делаем шаг
+        moveY(durHigh, (curBeat - durHigh));
+        // увеличиваем счетчик сделанных шагов
+        counter++;
     }
   }
 
@@ -527,10 +563,23 @@ class AutomaticMove {
 
   // опускаем шпиндель до G54
   void lowerZToG54(const uint32_t& toolLenDif) {
-    setMoveParam(ACCELERATED, 0, A_DOWN);  // конфигурируем движение стола вниз на ускоренном
+    // конфигурируем движение стола вниз на ускоренном
+    setMoveParam(ACCELERATED, 0, A_DOWN);
+    // координаты точки назначения по Z
     uint32_t destinationPointZ = rPointG54Z + toolLenDif + spacerHeight;
-    while (machinePosition.getPositionZ() > destinationPointZ) {
-        moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+    // находим длину пути и половину длины пути
+    findPathLength(machinePosition.getPositionZ(), destinationPointZ);
+    // счетчик, сколько шагов уже сделано на пути к G54
+    uint32_t counter = 0;
+    // устанавливаем начальную (минимальную) скорость страгивания с места
+    curBeat = maxBeat;
+    while (machinePosition.getPositionZ() != destinationPointZ) {
+        // рассчитываем скорость ускорения и замедления
+        calculateSpeed(counter);
+        // делаем шаг
+        moveZ(durHigh, (curBeat - durHigh));
+        // увеличиваем счетчик сделанных шагов
+        counter++;
     }
   }
 
@@ -568,12 +617,22 @@ class AutomaticMove {
             // уже пришло время тормозить
             if (counter > (pathLength - brakingDistance))
             {
-                curBeat = curBeat - (curBeat / aqAccel);
+                curBeat = curBeat + (curBeat / aqAccel);
             }
         }
     }
 
-  // сюда добавлять еще методы
+    // метод опускает шпиндель на высоту проставки spacerHeight
+    void lowerASpacerHeight()
+    {
+        // конфигурируем шпиндель для движения вниз
+        setMoveParam(AT_FEED, 150, A_DOWN);
+        for (uint16_t i = 0; i < spacerHeight; i++)
+        {
+            moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+        }
+    }
+    // сюда добавлять еще методы
 };
 
 
@@ -1502,6 +1561,8 @@ class ToolChangePoint {
     aMove.moveXToG54();       // двигаемся до G54 по всем трем осям
     aMove.moveYToG54();
     aMove.lowerZToG54(toolLenDif);
+    // дополнительно опускаем шпиндель от G54 еще на глубину проставки
+    aMove.lowerASpacerHeight();
 
     Serial.println("The tool is successfully installed!");
     return 0;   // возвращаем успешный код выполнения
@@ -2083,6 +2144,11 @@ void startProgram()
     // все условия для начала выполнения программы соблюдены
     else
     {
+        // идем в точку G54 (если мы еще не там)
+        refPoint.goToRPoint();
+        // опускаем шпиндель на глубину проставки, потому что refPoint.goToRPoint();
+        // приводит шпиндель к G54 + высота проставки
+        aMove.lowerASpacerHeight();
         synFrameProc sfp;             // имплементим класс распределения шагов// uint32_t oldZPosition = machinePosition.getPositionZ();
         openNcmFile();                // открываем sd карту для чтения
         while (true)
