@@ -171,7 +171,7 @@ class SpeedControl {
   const float qNotEquiLateral = 1.153;        // коэффициент при движении по 2 осям с участием оси Z
   const float qThreeAxis = 1.499;             // коэффициент для 3-х осей
   // максимальная допустимая скорость движения для данного станка. измеряется в микросекундах (длина полного такта)
-  const uint16_t maxSpeed = 150;
+  const uint16_t maxSpeed = 210;
   // длительность сигнала низкого уровня на ускоренном перемещении при движении только по одной из осей
   const uint16_t durLow1AxAccel = maxSpeed - durHighLevel;
   // длительность сигнала низкого уровня на ускоренном перемещении по двум осям (без участия оси Z)
@@ -649,15 +649,20 @@ class AutomaticMove {
         uint8_t tuneSpeedHigh = 40;
         uint8_t tuneSpeedLow = 140;
         // временные координаты, куда потом вернемся
-        uint32_t tempCurX = machinePosition.getPositionX();
-        uint32_t tempCurY = machinePosition.getPositionY();
-        uint32_t tempCurZ = machinePosition.getPositionZ();
+        const int32_t tempCurX = machinePosition.getPositionX();
+        const int32_t tempCurY = machinePosition.getPositionY();
+        const int32_t tempCurZ = machinePosition.getPositionZ();
         // счетчики, сколько фактически сделано шагов до касания концевика
-        uint32_t counterX = 0;
-        uint32_t counterY = 0;
-        uint32_t counterZ = 0;
+        int32_t counterX = 0;
+        int32_t counterY = 0;
+        int32_t counterZ = 0;
+        // разница
+        int32_t xDif = 0;
+        int32_t yDif = 0;
+        int32_t zDif = 0;
         // по каждой из осей двигаемся до касания с концевиком
         // сначала по Z
+        setMoveParam(ACCELERATED, 0, A_UP);
         while (!digitalRead(pinLimitSwitchZ)) {
             counterZ++;
             PORTH |= 1 << PORTH6;                 // подаем высокий уровень сигнала на мотор Z
@@ -665,6 +670,7 @@ class AutomaticMove {
             PORTH &= ~(1 << PORTH6);              // подаем низкий уровень сигнала на мотор Z
             delayMicroseconds(tuneSpeedLow);
         }
+        setMoveParam(ACCELERATED, 0, A_LEFT);
         while (!digitalRead(pinLimitSwitchX))
         {
             counterX++;
@@ -675,7 +681,8 @@ class AutomaticMove {
             PORTE &= ~(1 << PORTE5);              // подаем низкий уровень сигнала на второй мотор
             delayMicroseconds(tuneSpeedLow);
         }
-        while (digitalRead(pinLimitSwitchY))
+        setMoveParam(ACCELERATED, 0, A_BACK);
+        while (!digitalRead(pinLimitSwitchY))
         {
             counterY++;
             PORTG |= 1 << PORTG5;                 // подаем высокий уровень сигнала на первый мотор
@@ -685,15 +692,19 @@ class AutomaticMove {
             PORTB &= ~(1 << PORTB6);              // подаем низкий уровень сигнала на второй мотор
             delayMicroseconds(tuneSpeedLow);
         }
-        Serial.print("Xdif: ");
-        Serial.println(counterX - tempCurX);
-        Serial.print("Ydif: ");
-        Serial.println(counterY - tempCurY);
-        Serial.print("Zdif: ");
-        Serial.println(counterZ - tempCurZ);
+        xDif = counterX - tempCurX;
+        yDif = counterY - tempCurY;
+        zDif = counterZ - (zDistance - tempCurZ);
+        Serial.print("xDif: ");
+        Serial.println(xDif);
+        Serial.print("yDif: ");
+        Serial.println(yDif);
+        Serial.print("zDif: ");
+        Serial.println(zDif);
         Serial.println("formula: counterX - tempCurX");
         Serial.println();
         // возвращаемся обратно
+        setMoveParam(ACCELERATED, 0, A_RIGHT);
         while (counterX > 0)
         {
             counterX--;
@@ -704,6 +715,7 @@ class AutomaticMove {
             PORTE &= ~(1 << PORTE5);              // подаем низкий уровень сигнала на второй мотор
             delayMicroseconds(tuneSpeedLow);
         }
+        setMoveParam(ACCELERATED, 0, A_FORWARD);
         while (counterY > 0)
         {
             counterY--;
@@ -714,6 +726,7 @@ class AutomaticMove {
             PORTB &= ~(1 << PORTB6);              // подаем низкий уровень сигнала на второй мотор
             delayMicroseconds(tuneSpeedLow);
         }
+        setMoveParam(ACCELERATED, 0, A_DOWN);
         while (counterZ > 0)
         {
             counterZ--;
