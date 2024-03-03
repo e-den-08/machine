@@ -468,19 +468,28 @@ class AutomaticMove {
 
   // двигаем шпиндель по X до точки смены инструмента
   void moveXToolChange(const int32_t& changePointX) {
-    // выясняем с какой стороны от точки смены инструмента мы сейчас находимся
     if (machinePosition.getPositionX() < changePointX) {
       // мы находимся слева
       setMoveParam(ACCELERATED, 0, A_RIGHT);  // конфигурируем движение вправо ускор.
-      while (machinePosition.getPositionX() < changePointX) {
-          moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-      }
     } else if (machinePosition.getPositionX() > changePointX) {
       // мы находимся справа от точки смены инструмента
       setMoveParam(ACCELERATED, 0, A_LEFT);  // конфигурируем движение влево ускор.
-      while (machinePosition.getPositionX() > changePointX) {
-          moveX(speedSetting.durHighLevel, speedSetting.getSpeed('x'));
-      }
+    }
+    // находим длину пути и половину длины пути
+    findPathLength(machinePosition.getPositionX(), changePointX);
+    // счетчик, сколько шагов уже сделано на пути к G54
+    uint32_t counter = 0;
+    // устанавливаем начальную (минимальную) скорость страгивания с места
+    curBeat = maxBeat;
+
+    while (machinePosition.getPositionX() != changePointX)
+    {
+        // рассчитываем скорость ускорения и замедления
+        calculateSpeed(counter);
+        // делаем шаг
+        moveX(durHigh, (curBeat - durHigh));
+        // увеличиваем счетчик сделанных шагов
+        counter++;
     }
   }
 
@@ -548,7 +557,7 @@ class AutomaticMove {
 
   // метод опускает шпиндель до касания с датчиком инструмента
   uint8_t moveDownUntilTouchSensor() {
-    setMoveParam(AT_FEED, 150, A_DOWN);
+    setMoveParam(AT_FEED, 210, A_DOWN);
     // датчик работает на размыкание при нажатии: двигаем шпиндель вниз пока не разомкнет контакты ToolTouchDetected
     while (digitalRead(ToolTouchDetected)) {
         // проверяем на выход за нижний предел оси Z
@@ -630,6 +639,88 @@ class AutomaticMove {
         for (uint16_t i = 0; i < spacerHeight; i++)
         {
             moveZ(speedSetting.durHighLevel, speedSetting.getSpeed('z'));
+        }
+    }
+
+    // метод проверяет, нет ли смещения позиции из-за пропуска шагов
+    void checkPosition()
+    {
+        // скорость движения во время теста
+        uint8_t tuneSpeedHigh = 40;
+        uint8_t tuneSpeedLow = 140;
+        // временные координаты, куда потом вернемся
+        uint32_t tempCurX = machinePosition.getPositionX();
+        uint32_t tempCurY = machinePosition.getPositionY();
+        uint32_t tempCurZ = machinePosition.getPositionZ();
+        // счетчики, сколько фактически сделано шагов до касания концевика
+        uint32_t counterX = 0;
+        uint32_t counterY = 0;
+        uint32_t counterZ = 0;
+        // по каждой из осей двигаемся до касания с концевиком
+        // сначала по Z
+        while (!digitalRead(pinLimitSwitchZ)) {
+            counterZ++;
+            PORTH |= 1 << PORTH6;                 // подаем высокий уровень сигнала на мотор Z
+            delayMicroseconds(tuneSpeedHigh);
+            PORTH &= ~(1 << PORTH6);              // подаем низкий уровень сигнала на мотор Z
+            delayMicroseconds(tuneSpeedLow);
+        }
+        while (!digitalRead(pinLimitSwitchX))
+        {
+            counterX++;
+            PORTE |= 1 << PORTE4;                 // подаем высокий уровень сигнала на первый мотор
+            PORTE |= 1 << PORTE5;                 // подаем высокий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedHigh);
+            PORTE &= ~(1 << PORTE4);              // подаем низкий уровень сигнала на первый мотор
+            PORTE &= ~(1 << PORTE5);              // подаем низкий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedLow);
+        }
+        while (digitalRead(pinLimitSwitchY))
+        {
+            counterY++;
+            PORTG |= 1 << PORTG5;                 // подаем высокий уровень сигнала на первый мотор
+            PORTB |= 1 << PORTB6;                 // подаем высокий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedHigh);
+            PORTG &= ~(1 << PORTG5);              // подаем низкий уровень сигнала на первый мотор
+            PORTB &= ~(1 << PORTB6);              // подаем низкий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedLow);
+        }
+        Serial.print("Xdif: ");
+        Serial.println(counterX - tempCurX);
+        Serial.print("Ydif: ");
+        Serial.println(counterY - tempCurY);
+        Serial.print("Zdif: ");
+        Serial.println(counterZ - tempCurZ);
+        Serial.println("formula: counterX - tempCurX");
+        Serial.println();
+        // возвращаемся обратно
+        while (counterX > 0)
+        {
+            counterX--;
+            PORTE |= 1 << PORTE4;                 // подаем высокий уровень сигнала на первый мотор
+            PORTE |= 1 << PORTE5;                 // подаем высокий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedHigh);
+            PORTE &= ~(1 << PORTE4);              // подаем низкий уровень сигнала на первый мотор
+            PORTE &= ~(1 << PORTE5);              // подаем низкий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedLow);
+        }
+        while (counterY > 0)
+        {
+            counterY--;
+            PORTG |= 1 << PORTG5;                 // подаем высокий уровень сигнала на первый мотор
+            PORTB |= 1 << PORTB6;                 // подаем высокий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedHigh);
+            PORTG &= ~(1 << PORTG5);              // подаем низкий уровень сигнала на первый мотор
+            PORTB &= ~(1 << PORTB6);              // подаем низкий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedLow);
+        }
+        while (counterZ > 0)
+        {
+            counterZ--;
+            PORTH |= 1 << PORTH6;                 // подаем высокий уровень сигнала на мотор Z
+            delayMicroseconds(tuneSpeedHigh);
+            PORTH &= ~(1 << PORTH6);              // подаем низкий уровень сигнала на мотор Z
+            delayMicroseconds(tuneSpeedLow);
         }
     }
     // сюда добавлять еще методы
@@ -1956,6 +2047,8 @@ void read_line_sd()
                     i++;                            // увеличиваем разряд для следующей цифры
                     continue;                       // переходим к чтению следующего символа в .ncm файле
                 } else {
+                    // проверяем, что шаги не пропускались:
+                    aMove.checkPosition();
                     // Номер инструмента полностью записан.
                     // Переходим к процедуре физической замены инструмента.
                     // Для этого сначала нужно поднять шпиндель в самый верх и
