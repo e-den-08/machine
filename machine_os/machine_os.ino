@@ -2050,7 +2050,11 @@ void read_line_sd()
                 }
             }
         } else if (curChar == 'T') {
-            char tTempChar[3];
+            char tTempChar[4];
+            tTempChar[0] = '_';
+            tTempChar[1] = '_';
+            tTempChar[2] = '_';
+            tTempChar[3] = '\0';
             uint8_t i = 0;
             while (true) {
                 curChar = ncFile.read();            // читаем следующий символ
@@ -2060,6 +2064,9 @@ void read_line_sd()
                     i++;                            // увеличиваем разряд для следующей цифры
                     continue;                       // переходим к чтению следующего символа в .ncm файле
                 } else {
+                    // выводим в порт номер инструмента, какой сейчас нужен
+                    Serial.print("need to install tool number: ");
+                    Serial.println(tTempChar);
                     // проверяем, что шаги не пропускались:
                     aMove.checkPosition();
                     // Номер инструмента полностью записан.
