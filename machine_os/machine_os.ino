@@ -2495,6 +2495,7 @@ public:
         workpieceEdges.frontSide = 0;
     }
 
+    // метод борется с дребезгом контактов при нажатии кнопки
     bool contactDebouncing()
     {
         uint16_t duration = 1000;                           // продолжительность паузы в миллисекундах
@@ -2578,6 +2579,7 @@ public:
                 workpieceEdges.rightSide = machinePosition.getPositionX() - stepsBallRadiusXY + sensorErrorX;
                 // отодвигаем шпиндель немного вправо отстенки
                 toRetract(A_RIGHT);
+                Serial.println("Right side of the workpiece found.");
                 break;  // заканчиваем слушать нажатую кнопку "влево"
             }
         }
@@ -2607,6 +2609,7 @@ public:
                 workpieceEdges.leftSide = machinePosition.getPositionX() + stepsBallRadiusXY - sensorErrorX;
                 // отодвигаем шпиндель немного левее от стенки
                 toRetract(A_LEFT);
+                Serial.println("Left side of the workpiece found.");
                 break;  // заканчиваем слушать нажатую кнопку "вправо"
             }
         }
@@ -2636,6 +2639,7 @@ public:
                 workpieceEdges.backSide = machinePosition.getPositionY() - stepsBallRadiusXY + sensorErrorY;
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_FORWARD);
+                Serial.println("Back side of the workpiece found.");
                 break;  // заканчиваем слушать нажатую кнопку "назад"
             }
         }
@@ -2665,6 +2669,7 @@ public:
                 workpieceEdges.frontSide = machinePosition.getPositionY() + stepsBallRadiusXY - sensorErrorY;
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_BACK);
+                Serial.println("Front side of the workpiece found.");
                 break;  // заканчиваем слушать нажатую кнопку "вперед"
             }
         }
@@ -2694,8 +2699,7 @@ public:
                 workpieceEdges.upperSide = machinePosition.getPositionZ() + sensorErrorZ;
                 // немного приподнимаем шпиндель над заготовкой
                 toRetract(A_UP);
-                Serial.print("upperSide: ");
-                Serial.println(workpieceEdges.upperSide);
+                Serial.println("Top side of the workpiece found.");
                 break;  // заканчиваем слушать нажатую кнопку "вниз"
             }
         }
