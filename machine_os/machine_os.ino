@@ -1692,6 +1692,7 @@ class ToolChangePoint {
     if (raiseFewMilliveters(2)) {
         return GENERAL_ERROR;
     }
+    Serial.println("Tool change sensor initialized.");
     toolLenDif = 0;                         // обнуляем разницу длины инструментов
     return 0;
   }
@@ -2727,7 +2728,9 @@ G54Finder g54f;             // имплементим класс полуавт�
 
 void loop() {
   delay(1500);                  // даем возможность запуститься блокам питания перед считыванием состояния пульта упавления
+  Serial.println("The machine is started.");
   digitalWrite(pinEn, LOW);     // включаем двигатели
+  Serial.println("Engines are running.");
   while (true) {                // основной цикл
     mControl.isOnManual();      // проверяем нажата ли одна из кнопок ручного перемещения
     if (digitalRead(pinTuneMachine)) {      // нажат тумблер выхода в ноль координат станка
