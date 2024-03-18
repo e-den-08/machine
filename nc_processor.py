@@ -3,9 +3,11 @@
 # ответ с prestigio
 # третий и исправленный ответ с престижио
 
-
+import os
+import sys                  # модуль необходим для sys.exit в случае если найдено обстоятельство препятствующее
+                            # дальнейшей обработке файла
 # инициализация:
-file_name = 'speed_test'
+file_name = 'PCB_BC817C'
 
 folder_source = 'source/'
 encoding_val = 'cp1251'
@@ -287,6 +289,10 @@ for line in gc_list:
                     arr_prog.append("G" + str(cur_g_code))
                 elif cur_g_code == 1:
                     arr_prog.append("G" + str(cur_g_code))
+                elif cur_g_code == 2 or cur_g_code == 3:
+                    print("В файле " + file_name + ".nc присутствует круговая интерполяция G3 или G2")
+                    print("дальнейшая обработка файла невозможна")
+                    sys.exit(1)
     # в строчке нашли координаты по X, Y или Z
     if 'X' in line or 'Y' or 'Z' in line:
         x_move = 0                         # обнуляем переменные, содержащие количество шагов в кадре, чтобы
