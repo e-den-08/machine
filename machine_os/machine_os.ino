@@ -1273,7 +1273,7 @@ class ManualControl {     // класс ручного управления пе
   uint16_t curSpeed = 0;                // текущая скорость - отправляется на двигатели (изменяется методами разгона и торможения)
   const uint16_t firstSpeedManual = 8000;   // пауза низкого уровня сигнала (она и формирует скорость движения)
   const uint16_t secondSpeedManual = 200;
-  const uint16_t thirdSpeedManual = 110;
+  const uint16_t thirdSpeedManual = 73;
   const uint16_t highsval = 40;          // пауза для высокого уровня сигнала (для всех скоростей одинаковая)
 
   // метод возвращает скорость вращения двигателей по осям
