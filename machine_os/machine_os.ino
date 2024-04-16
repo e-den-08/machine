@@ -2069,7 +2069,7 @@ void read_line_sd()
                     Serial.print("need to install tool number: ");
                     Serial.println(tTempChar);
                     // проверяем, что шаги не пропускались:
-                    aMove.checkPosition();
+                    // aMove.checkPosition();
                     // Номер инструмента полностью записан.
                     // Переходим к процедуре физической замены инструмента.
                     // Для этого сначала нужно поднять шпиндель в самый верх и
