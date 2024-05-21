@@ -53,7 +53,7 @@ String fileName = "do_now.ncm";
 #define pinSeSpeed 24
 #define pinThSpeed 22
 const uint8_t pinToLeft    = 31;   // кнопки движения на пульте управления
-const uint8_t pinToRight   = 32;
+const uint8_t pinToRight   = 33;
 const uint8_t pinToForward = 27;
 const uint8_t pinToBack    = 29;
 const uint8_t pinToTop     = 25;
