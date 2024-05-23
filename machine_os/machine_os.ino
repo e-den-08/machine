@@ -670,17 +670,7 @@ class AutomaticMove {
             PORTH &= ~(1 << PORTH6);              // подаем низкий уровень сигнала на мотор Z
             delayMicroseconds(tuneSpeedLow);
         }
-        setMoveParam(ACCELERATED, 0, A_LEFT);
-        while (!digitalRead(pinLimitSwitchX))
-        {
-            counterX++;
-            PORTE |= 1 << PORTE4;                 // подаем высокий уровень сигнала на первый мотор
-            PORTE |= 1 << PORTE5;                 // подаем высокий уровень сигнала на второй мотор
-            delayMicroseconds(tuneSpeedHigh);
-            PORTE &= ~(1 << PORTE4);              // подаем низкий уровень сигнала на первый мотор
-            PORTE &= ~(1 << PORTE5);              // подаем низкий уровень сигнала на второй мотор
-            delayMicroseconds(tuneSpeedLow);
-        }
+        // двигаем стол до самого концевика
         setMoveParam(ACCELERATED, 0, A_BACK);
         while (!digitalRead(pinLimitSwitchY))
         {
@@ -692,6 +682,19 @@ class AutomaticMove {
             PORTB &= ~(1 << PORTB6);              // подаем низкий уровень сигнала на второй мотор
             delayMicroseconds(tuneSpeedLow);
         }
+        // двигаем ось X до самого концевика
+        setMoveParam(ACCELERATED, 0, A_LEFT);
+        while (!digitalRead(pinLimitSwitchX))
+        {
+            counterX++;
+            PORTE |= 1 << PORTE4;                 // подаем высокий уровень сигнала на первый мотор
+            PORTE |= 1 << PORTE5;                 // подаем высокий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedHigh);
+            PORTE &= ~(1 << PORTE4);              // подаем низкий уровень сигнала на первый мотор
+            PORTE &= ~(1 << PORTE5);              // подаем низкий уровень сигнала на второй мотор
+            delayMicroseconds(tuneSpeedLow);
+        }
+        // находим разницу между фактически пройденной дистанцией по осям и тем, что было в cur_Ось
         xDif = counterX - tempCurX;
         yDif = counterY - tempCurY;
         zDif = counterZ - (zDistance - tempCurZ);
@@ -704,6 +707,8 @@ class AutomaticMove {
         Serial.println("formula: counterX - tempCurX");
         Serial.println();
         // возвращаемся обратно
+
+        // двигаемся по оси X
         setMoveParam(ACCELERATED, 0, A_RIGHT);
         while (counterX > 0)
         {
@@ -2069,7 +2074,7 @@ void read_line_sd()
                     Serial.print("need to install tool number: ");
                     Serial.println(tTempChar);
                     // проверяем, что шаги не пропускались:
-                    // aMove.checkPosition();
+                    aMove.checkPosition();
                     // Номер инструмента полностью записан.
                     // Переходим к процедуре физической замены инструмента.
                     // Для этого сначала нужно поднять шпиндель в самый верх и
