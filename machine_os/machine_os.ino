@@ -1733,13 +1733,13 @@ class ReferentPoint {
     rPointG54Z = machinePosition.getPositionZ() - spacerHeight;
     Serial.println("Manual G54 point is installed successfully.");
     Serial.print("X: ");
-    Serial.print(rPointG54X * 0.0025, 2);
+    Serial.print(rPointG54X * 0.0025);
     Serial.println("mm");
     Serial.print("Y: ");
-    Serial.print(rPointG54Y * 0.0025, 2);
+    Serial.print(rPointG54Y * 0.0025);
     Serial.println("mm");
     Serial.print("Z: ");
-    Serial.print(rPointG54Z * 0.00125, 2);
+    Serial.print(rPointG54Z * 0.00125);
     Serial.println("mm");
     // пауза, чтобы в порт не летело бесконечное количество сообщений
         delay(1000);
@@ -2372,26 +2372,32 @@ public:
             while (digitalRead(startSearchG54Rectangle))
             {
                 // cлушаем нажатия кнопок перемещения по осям:
+
+                // ищем правую грань заготовки:
                 if (digitalRead(pinToLeft))
                 {
                     // двигаем шпиндель влево и одновременно слушаем датчик касания
                     searchRightSide();
                 }
+                // ищем левую грань заготовки:
                 else if (digitalRead(pinToRight))
                 {
                     // двигаем шпиндель вправо и слушаем датчик касания
                     searchLeftSide();
                 }
+                // ищем заднюю (дальнюю от оператора) грань заготовки:
                 else if (digitalRead(pinToForward))
                 {
                     // двигаем шпиндель вперед (к оператору) и слушаем датчик касания
                     searchBackSide();
                 }
+                // ищеь переднюю (ближе к оператору) грань заготовки
                 else if (digitalRead(pinToBack))
                 {
                     // двигаем шпиндель назад (от оператора) и слушаем датчик касания
                     searchFrontSide();
                 }
+                // ищем верхнюю грань заготовки
                 else if (digitalRead(pinToBottom))
                 {
                     // двигаем шпиндель вниз и слушаем датчик касания
@@ -2504,13 +2510,13 @@ public:
         // методе setReferentialPointG54()
         // класса ReferentPoint
         Serial.print("X: ");
-        Serial.print(rPointG54X * 0.0025, 2);
+        Serial.print(rPointG54X * 0.0025);
         Serial.println("mm");
         Serial.print("Y: ");
-        Serial.print(rPointG54Y * 0.0025, 2);
+        Serial.print(rPointG54Y * 0.0025);
         Serial.println("mm");
         Serial.print("Z: ");
-        Serial.print(rPointG54Z * 0.00125, 2);
+        Serial.print(rPointG54Z * 0.00125);
         Serial.println("mm");
         // пауза, чтобы в порт не летело бесконечное количество сообщений
         delay(1000);
@@ -2607,6 +2613,9 @@ public:
                 // отодвигаем шпиндель немного вправо отстенки
                 toRetract(A_RIGHT);
                 Serial.println("Right side of the workpiece found.");
+                Serial.print("X = ");
+                Serial.print(workpieceEdges.rightSide * 0.0025);
+                Serial.println("mm right side.");
                 break;  // заканчиваем слушать нажатую кнопку "влево"
             }
         }
@@ -2637,6 +2646,9 @@ public:
                 // отодвигаем шпиндель немного левее от стенки
                 toRetract(A_LEFT);
                 Serial.println("Left side of the workpiece found.");
+                Serial.print("X = ");
+                Serial.print(workpieceEdges.leftSide * 0.0025);
+                Serial.println("mm left side.");
                 break;  // заканчиваем слушать нажатую кнопку "вправо"
             }
         }
@@ -2667,6 +2679,9 @@ public:
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_FORWARD);
                 Serial.println("Back side of the workpiece found.");
+                Serial.print("Y = ");
+                Serial.print(workpieceEdges.backSide * 0.0025);
+                Serial.println("mm back side.");
                 break;  // заканчиваем слушать нажатую кнопку "назад"
             }
         }
@@ -2697,6 +2712,9 @@ public:
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_BACK);
                 Serial.println("Front side of the workpiece found.");
+                Serial.print("Y = ");
+                Serial.print(workpieceEdges.frontSide * 0.0025);
+                Serial.println("mm front side.");
                 break;  // заканчиваем слушать нажатую кнопку "вперед"
             }
         }
@@ -2727,6 +2745,9 @@ public:
                 // немного приподнимаем шпиндель над заготовкой
                 toRetract(A_UP);
                 Serial.println("Top side of the workpiece found.");
+                Serial.print("Z = ");
+                Serial.print(workpieceEdges.upperSide * 0.00125);
+                Serial.println("mm top side.");
                 break;  // заканчиваем слушать нажатую кнопку "вниз"
             }
         }
