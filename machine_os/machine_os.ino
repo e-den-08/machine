@@ -1731,7 +1731,16 @@ class ReferentPoint {
     rPointG54X = machinePosition.getPositionX();
     rPointG54Y = machinePosition.getPositionY();
     rPointG54Z = machinePosition.getPositionZ() - spacerHeight;
-    Serial.println("G54 point is installed successfully.");
+    Serial.println("Manual G54 point is installed successfully.");
+    Serial.print("X: ");
+    Serial.print(rPointG54X * 0.0025, 2);
+    Serial.println("mm");
+    Serial.print("Y: ");
+    Serial.print(rPointG54Y * 0.0025, 2);
+    Serial.println("mm");
+    Serial.print("Z: ");
+    Serial.print(rPointG54Z * 0.00125, 2);
+    Serial.println("mm");
     // пауза, чтобы в порт не летело бесконечное количество сообщений
         delay(1000);
   }
@@ -2489,7 +2498,20 @@ public:
             rPointG54Y = workpieceEdges.frontSide +
                          ((workpieceEdges.backSide - workpieceEdges.frontSide) / 2);
         }
-        Serial.println("G54 point installed successfully!");
+        Serial.println("Automatic G54 point installed successfully!");
+        // выводми координаты точки G54 в миллиметрах (до состых)
+        // точно такой же вывод координат прописан в
+        // методе setReferentialPointG54()
+        // класса ReferentPoint
+        Serial.print("X: ");
+        Serial.print(rPointG54X * 0.0025, 2);
+        Serial.println("mm");
+        Serial.print("Y: ");
+        Serial.print(rPointG54Y * 0.0025, 2);
+        Serial.println("mm");
+        Serial.print("Z: ");
+        Serial.print(rPointG54Z * 0.00125, 2);
+        Serial.println("mm");
         // пауза, чтобы в порт не летело бесконечное количество сообщений
         delay(1000);
         // обнуляем все найденные стороны, чтобы можно было повторно начать поиск сторон
