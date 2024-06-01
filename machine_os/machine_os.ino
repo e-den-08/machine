@@ -34,6 +34,11 @@ uint8_t microStep = 8;                    // микрошаг шаговых д�
 uint8_t gSpeed = 0;                       // G-команда, 1 - подача / 2 - ускоренное перемещение
 uint16_t fSpeed = 180;                    // F-команда, подача в миллиметрах в минуту
 
+// коэффициенты перевода шагов в миллиметры (сколько миллиметров в одном шаге)
+const float XQStepsToMm = 0.0025;
+const float YQStepsToMm = 0.0025;
+const float ZQStepsToMm = 0.00125;
+
 String fileName = "do_now.ncm";
 
 // пины, отвечающие за ручное управление:
@@ -331,9 +336,9 @@ class PositionTracking {            // класс отвечает за отсл
 
   void printPosition() {
     Serial.print("X: ");
-    Serial.print(absStepsOfAxisX * 0.0025, 3);
-    Serial.print("; Y: " + String(absStepsOfAxisY * 0.0025, 3));
-    Serial.println("; Z: " + String(absStepsOfAxisZ * 0.005, 3));
+    Serial.print(absStepsOfAxisX * XQStepsToMm, 3);
+    Serial.print("; Y: " + String(absStepsOfAxisY * YQStepsToMm, 3));
+    Serial.println("; Z: " + String(absStepsOfAxisZ * ZQStepsToMm, 3));
   }
 
 };
@@ -1413,28 +1418,24 @@ class ManualControl {     // класс ручного управления пе
     uint8_t stopOutWorkArea = digitalRead(pinEnTuning); // проверяем, включено ли ограничение выхода за пределы рабочего пространства
 
     while (digitalRead(pressedButton)) {                // отлавливаем конец нажатия кнопки
+      // 6 нижеследующих условий завершают цикл отслеживания нажатия кнопки, потому что
+      // достигнут предел длины оси и дальше движение невозможно
       if (stopOutWorkArea && pressedButton == pinToLeft && machinePosition.getPositionX() <= 0 + breakDist) {
-        Serial.println("out of range! axis X to left");
         break;
       }
       if (stopOutWorkArea && pressedButton == pinToRight && machinePosition.getPositionX() >= widthXAxis - breakDist) {
-        Serial.println("out of range! axis X to right");
         break;
       }
       if (stopOutWorkArea && pressedButton == pinToForward && machinePosition.getPositionY() <= 0 + breakDist) {
-        Serial.println("out of range! axis Y to forward");
         break;
       }
       if (stopOutWorkArea && pressedButton == pinToBack && machinePosition.getPositionY() >= lengthYAxis - breakDist) {
-        Serial.println("out of range! axis Y to back");
         break;
       }
       if (stopOutWorkArea && pressedButton == pinToTop && machinePosition.getPositionZ() >= zDistance - breakDist) {
-        Serial.println("out of range! axis Z to top");
         break;
       }
       if (stopOutWorkArea && pressedButton == pinToBottom && machinePosition.getPositionZ() <= 0 + breakDist) {
-        Serial.println("out of range! axis Z to bottom");
         break;
       }
       // создаем разгон
@@ -1697,7 +1698,13 @@ class ToolChangePoint {
     if (raiseFewMilliveters(2)) {
         return GENERAL_ERROR;
     }
-    Serial.println("Tool change sensor initialized.");
+    Serial.print("Tool change sensor initialized.");
+    Serial.print(" X");
+    Serial.print(changePointX);
+    Serial.print(" Y");
+    Serial.print(changePointY);
+    Serial.print(" Z");
+    Serial.println(changePointZ);
     toolLenDif = 0;                         // обнуляем разницу длины инструментов
     return 0;
   }
@@ -1733,13 +1740,13 @@ class ReferentPoint {
     rPointG54Z = machinePosition.getPositionZ() - spacerHeight;
     Serial.println("Manual G54 point is installed successfully.");
     Serial.print("X: ");
-    Serial.print(rPointG54X * 0.0025);
+    Serial.print(rPointG54X * XQStepsToMm);
     Serial.println("mm");
     Serial.print("Y: ");
-    Serial.print(rPointG54Y * 0.0025);
+    Serial.print(rPointG54Y * YQStepsToMm);
     Serial.println("mm");
     Serial.print("Z: ");
-    Serial.print(rPointG54Z * 0.00125);
+    Serial.print(rPointG54Z * ZQStepsToMm);
     Serial.println("mm");
     // пауза, чтобы в порт не летело бесконечное количество сообщений
         delay(1000);
@@ -2510,13 +2517,13 @@ public:
         // методе setReferentialPointG54()
         // класса ReferentPoint
         Serial.print("X: ");
-        Serial.print(rPointG54X * 0.0025);
+        Serial.print(rPointG54X * XQStepsToMm);
         Serial.println("mm");
         Serial.print("Y: ");
-        Serial.print(rPointG54Y * 0.0025);
+        Serial.print(rPointG54Y * YQStepsToMm);
         Serial.println("mm");
         Serial.print("Z: ");
-        Serial.print(rPointG54Z * 0.00125);
+        Serial.print(rPointG54Z * ZQStepsToMm);
         Serial.println("mm");
         // пауза, чтобы в порт не летело бесконечное количество сообщений
         delay(1000);
@@ -2588,6 +2595,16 @@ public:
         delay(pauseDuration);
     }
 
+    void printCoordinates(uint32_t x, uint32_t y, uint32_t z)
+    {
+        Serial.print("X");
+        Serial.print(x);
+        Serial.print(" Y");
+        Serial.print(y);
+        Serial.print(" Z");
+        Serial.println(z);
+    }
+
     // метод ищет правую сторону заготовки
     void searchRightSide()
     {
@@ -2613,9 +2630,9 @@ public:
                 // отодвигаем шпиндель немного вправо отстенки
                 toRetract(A_RIGHT);
                 Serial.println("Right side of the workpiece found.");
-                Serial.print("X = ");
-                Serial.print(workpieceEdges.rightSide * 0.0025);
-                Serial.println("mm right side.");
+                printCoordinates(workpieceEdges.rightSide,
+                                 machinePosition.getPositionY(),
+                                 machinePosition.getPositionZ());
                 break;  // заканчиваем слушать нажатую кнопку "влево"
             }
         }
@@ -2646,9 +2663,9 @@ public:
                 // отодвигаем шпиндель немного левее от стенки
                 toRetract(A_LEFT);
                 Serial.println("Left side of the workpiece found.");
-                Serial.print("X = ");
-                Serial.print(workpieceEdges.leftSide * 0.0025);
-                Serial.println("mm left side.");
+                printCoordinates(workpieceEdges.leftSide,
+                                 machinePosition.getPositionY(),
+                                 machinePosition.getPositionZ());
                 break;  // заканчиваем слушать нажатую кнопку "вправо"
             }
         }
@@ -2679,9 +2696,9 @@ public:
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_FORWARD);
                 Serial.println("Back side of the workpiece found.");
-                Serial.print("Y = ");
-                Serial.print(workpieceEdges.backSide * 0.0025);
-                Serial.println("mm back side.");
+                printCoordinates(machinePosition.getPositionX(),
+                                 workpieceEdges.backSide,
+                                 machinePosition.getPositionZ());
                 break;  // заканчиваем слушать нажатую кнопку "назад"
             }
         }
@@ -2712,9 +2729,9 @@ public:
                 // немного отодвигаем шпиндель от стенки
                 toRetract(A_BACK);
                 Serial.println("Front side of the workpiece found.");
-                Serial.print("Y = ");
-                Serial.print(workpieceEdges.frontSide * 0.0025);
-                Serial.println("mm front side.");
+                printCoordinates(machinePosition.getPositionX(),
+                                 workpieceEdges.frontSide,
+                                 machinePosition.getPositionZ());
                 break;  // заканчиваем слушать нажатую кнопку "вперед"
             }
         }
@@ -2745,9 +2762,9 @@ public:
                 // немного приподнимаем шпиндель над заготовкой
                 toRetract(A_UP);
                 Serial.println("Top side of the workpiece found.");
-                Serial.print("Z = ");
-                Serial.print(workpieceEdges.upperSide * 0.00125);
-                Serial.println("mm top side.");
+                printCoordinates(machinePosition.getPositionX(),
+                                 machinePosition.getPositionY(),
+                                 workpieceEdges.upperSide);
                 break;  // заканчиваем слушать нажатую кнопку "вниз"
             }
         }
