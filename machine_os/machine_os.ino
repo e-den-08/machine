@@ -2361,9 +2361,9 @@ private:
     uint16_t stepsBallRadiusZ  = mmBallRadius * stepsInMm.z;
     // погрешность датчика в шагах (расстояние срабатывания)
     // найдено с параллелькой (плитка 5мм)
-    const uint16_t sensorErrorX = 30;
-    const uint16_t sensorErrorY = 26;
-    const uint16_t sensorErrorZ = 50;
+    const uint16_t sensorErrorX = 17;
+    const uint16_t sensorErrorY = 25;
+    const uint16_t sensorErrorZ = 22;
 
 public:
     // конструктор класса
