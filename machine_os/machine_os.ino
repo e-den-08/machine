@@ -2826,11 +2826,12 @@ void loop() {
   Serial.println("Engines are running.");
   // инициализируем нулевую точку для устройства вращения заготовки и точку смены инструмента
   changeP.changePointX = 129030;
-  changeP.changePointY = 59732;
+  changeP.changePointY = 0;
   changeP.changePointZ = 12733;
-  rPointG54X = 58492;
-  rPointG54Y = 59738;
-  rPointG54Z = 35390;
+  // центр вращения: Y59738 Z35390
+  rPointG54X = widthXAxis - 2000;   // на 5мм левее правого предела оси X
+  rPointG54Y = 59738;               // ровно на оси вращения
+  rPointG54Z = 35390 + 20000;    // на 25мм выше оси вращения (12.7мм ниже верхнего предела)
   Serial.println("changeP and G54 initialised.");
 
   while (true) {                // основной цикл
