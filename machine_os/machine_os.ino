@@ -73,6 +73,7 @@ const uint8_t pinToBottom  = 23;
 // выход в ноль координат ЗАГОТОВКИ, поиск центра заготовки
 const uint8_t pinTouchProbe = 36;           // пин, снимает показания с датчика 3D Touch Probe
 const uint8_t startSearchG54Rectangle = 39; // тумблер, старт поиска нулевой точки заготовки в полуавтоматическом режиме
+bool touchProbeIsOn = false;                // флаг показывает подключен ли в данный момент 3D Touch Probe
 
 #define left LOW                           // маска направлления движения по осям HIGH / LOW
 #define right HIGH
@@ -138,7 +139,7 @@ const uint8_t OVER_LOW_LIMIT = 1;       // шпиндель заходит за 
 const uint8_t OVER_HIGH_LIMIT = 2;      // шпиндель заходит за верхнюю границу по Z
 const uint8_t TOO_SHORT_TOOL = 7;       // инструмент в шпинделе слишком короткий
 const uint8_t TOO_LONG_TOOL = 8;        // инструмент в шпинделе слишком длинный
-
+const uint8_t SHOCK_SENSOR_3D_TOUCH = 9;    // датчик 3D Touch Probe столкнулся с препятствием на ускоренном ходу
 const uint8_t GENERAL_ERROR = 255;
 
 // порядковые номера цифр в таблице ASCII
@@ -1411,13 +1412,27 @@ class ManualControl {     // класс ручного управления пе
   }
 
 
-  void axisMovement (uint16_t rotationSpeed, uint8_t pressedButton) {     // метод вращает мотор пока нажата кнопка
+  int axisMovement (uint16_t rotationSpeed, uint8_t pressedButton) {     // метод вращает мотор пока нажата кнопка
     uint8_t qAccel = 60;                                 // число микросекунд прибавляемое на каждом следующем шаге при разгоне
     uint16_t minSpeed = 2000;                           // скорость, с которой начинается разгон
     uint8_t breakDist = 237;                            // длина тормозного пути в шагах (зависит от коэффициента замедления)
     uint8_t stopOutWorkArea = digitalRead(pinEnTuning); // проверяем, включено ли ограничение выхода за пределы рабочего пространства
 
     while (digitalRead(pressedButton)) {                // отлавливаем конец нажатия кнопки
+      // отслеживаем столкновение 3D Touch Sensor (если подключен)
+      // флаг touchProbeIsOn определяет, подключен ли датчик
+      // условие !digitalRead(pinTouchProbe) определяет, что датчик столкнулся с препятствием
+      if (touchProbeIsOn && !digitalRead(pinTouchProbe))
+      {
+        // замедляем скорость движения до нуля
+        slowdown(rotationSpeed, minSpeed, qAccel, pressedButton);
+        Serial.println("Push of 3D Touch Probe detector! The machine is locked.");
+        // делаем паузу, чтобы шпиндель снова не поехал в припятствие, пока мы соображаем что произошло
+        delay(7000);
+        Serial.println("The machine is unlocked and ready to work.");
+        // завершаем метод axisMovement() и возвращаем код ошибки
+        return SHOCK_SENSOR_3D_TOUCH;
+      }
       // 6 нижеследующих условий завершают цикл отслеживания нажатия кнопки, потому что
       // достигнут предел длины оси и дальше движение невозможно
       if (stopOutWorkArea && pressedButton == pinToLeft && machinePosition.getPositionX() <= 0 + breakDist) {
@@ -1472,6 +1487,7 @@ class ManualControl {     // класс ручного управления пе
       slowdown(rotationSpeed, minSpeed, qAccel, pressedButton);
     }
     curSpeed = 0;                                       // обнуляем текущую скорость
+    return 0;       // успешное завершение метода
   }
 
   // метод замедляет движение по оси в ручном режиме
@@ -1558,6 +1574,14 @@ class ManualControl {     // класс ручного управления пе
 
 
   void isOnManual() {            // метод проверяет
+    if (digitalRead(pinTouchProbe))     // определяем, подключен ли в данный момент датчик 3D Touch Probe
+    {                                   // это надо, чтобы предотвращать столкновение датчика на ускоренном ходу
+        touchProbeIsOn = true;          // подключен
+    }
+    else
+    {
+        touchProbeIsOn = false;         // не подключен
+    }
     if (digitalRead(pinToLeft)) {              // нажата кнопка "Влево"?
       // после нажатия кнопки ручного перемещения опрашиваем состояние всех положений рукоятки скорости
       //(выясняем, на какой скорости сейчас надо вигаться)
@@ -2800,6 +2824,15 @@ void loop() {
   Serial.println("The machine is started.");
   digitalWrite(pinEn, LOW);     // включаем двигатели
   Serial.println("Engines are running.");
+  // инициализируем нулевую точку для устройства вращения заготовки и точку смены инструмента
+  changeP.changePointX = 129030;
+  changeP.changePointY = 59732;
+  changeP.changePointZ = 12733;
+  rPointG54X = 58492;
+  rPointG54Y = 59738;
+  rPointG54Z = 35390;
+  Serial.println("changeP and G54 initialised.");
+
   while (true) {                // основной цикл
     mControl.isOnManual();      // проверяем нажата ли одна из кнопок ручного перемещения
     if (digitalRead(pinTuneMachine)) {      // нажат тумблер выхода в ноль координат станка
