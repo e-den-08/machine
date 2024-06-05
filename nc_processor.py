@@ -7,7 +7,7 @@ import os
 import sys                  # модуль необходим для sys.exit в случае если найдено обстоятельство препятствующее
                             # дальнейшей обработке файла
 # инициализация:
-file_name = 'do_now'
+file_name = 'install_1'
 
 folder_source = 'source/'
 encoding_val = 'cp1251'
@@ -274,6 +274,8 @@ for line in gc_list:
                         y_cur = 0
                         z_cur = 0
                         # print("CHANGE TOOL!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+                if cur_m_code == 0:                     # обрабатываем код M0 "программируемый останов"
+                    arr_prog.append("M0")
     # в строке присутствует определение скорости подачи F
     if 'F' in line:
         list_line = line.split()            # из строки делаем список строки, стостоящий из юнитов
