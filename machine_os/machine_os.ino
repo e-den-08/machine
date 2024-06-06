@@ -51,7 +51,7 @@ String fileName = "do_now.ncm";
 #define pinGoChangePoint 45     // кнопка идем к точке смены инструмента по X
 #define ToolTouchDetected 37    // пин слушает касание инструментом датчика
 #define pinSetToolSensor 40     // тумблер задать координаты точки в которой будет происходить смена инструмента
-#define pinAutoSetTool 42       // кнопка продолжить программу после замены инструмента
+#define pinAutoSetTool 42       // кнопка продолжить программу после замены инструмента (это кнопка Continue)
 
 #define pinStepByStep 28        // тумблеры скоростей на пульте управления
 #define pinFiSpeed 26
@@ -165,6 +165,8 @@ const char A_DOWN       = 'd';
 // константы переключения между подачей и ускорунным перемещением
 const int ACCELERATED   = 0;
 const int AT_FEED       = 1;
+// константы M кодов
+const uint8_t PROGRAMMABLE_STOP = 0;        // M0 программируемый останов во время выполнения программы
 
 // описываем классы:
 
@@ -443,7 +445,7 @@ class AutomaticMove {
     uint32_t counter = 0;
     // устанавливаем начальную (минимальную) скорость страгивания с места
     curBeat = maxBeat;
-    while (machinePosition.getPositionZ() <= zDistance ) {
+    while (machinePosition.getPositionZ() < zDistance ) {
         // рассчитываем скорость ускорения и замедления
         calculateSpeed(counter);
         // делаем шаг
@@ -2149,7 +2151,61 @@ void read_line_sd()
                     break;                            // Выходим из цикла поиска всех цифр за буквой
                 }
             }
-        } else {
+        }
+        else if (curChar == 'M')
+        {
+            char mTemp[3];                      // значение M кода (массив char) (может быть двухзначным)
+            uint8_t i = 0;                      // номер разряда числа, куда будет записан прочитанный символ (в mTemp)
+            // читаем все числовые символы, следующие за буквой M
+            while (true)
+            {
+                curChar = ncFile.read();    // читаем следующий символ из файла
+                // если прочитанный символ число:
+                if (curChar >= ZERO && curChar <= NINE)
+                {
+                    mTemp[i] = curChar;
+                    i++;                    // увеличиваем разряд для следующего символа mTemp[]
+                    continue;               // переходим к чтению следующего символа в .ncm файле
+                }
+                else        // все цифры M кода записаны. Дальше выясняем, какое число составлено из этих цифр
+                {
+                    // создаем полноценную строку добавлением символа конца строки (без этого atol() не работает)
+                    mTemp[i] = '\0';
+                    uint8_t mTempInt = atol(mTemp);     // массив символов переводим в числовой тип
+
+                    if (mTempInt == PROGRAMMABLE_STOP)  // в коде встретился M0 (программируемый останов)
+                    {
+                        Serial.println("Need to rotate the workpiece");
+                        aMove.toRiseSpindle();          // поднимаем шпиндель
+                        aMove.moveAlongTable();         // отодвигаем стол
+                        // теперь можно вращать заготовку
+                        // а пока ждем нажатия кнопки Continue, слушаем нажатие кнопок перемещения
+                        while (!digitalRead(pinAutoSetTool))
+                        {
+                            if (digitalRead(pinGoToG54))    // слушаем нажатие кнопки "перейти к G54"
+                            {
+                                refPoint.goToRPoint();
+                            }
+                            mControl.isOnManual();      // слушаем нажатие кнопок ручного управления
+                        }
+                        // теперь, когда кнопка Continue нажата, мы можем двигаться к G54
+                        aMove.toRiseSpindle();          // поднимаем шпиндель
+                        aMove.moveAlongTable();         // отодвигаем стол (в случае, если были ручные перемещения)
+                        // идем в точку G54
+                        refPoint.goToRPoint();
+                        // опускаем шпиндель на глубину проставки, потому что refPoint.goToRPoint();
+                        // приводит шпиндель к G54 + высота проставки
+                        aMove.lowerASpacerHeight();
+                        // шпиндель находится в G54 и теперь можно продолжить выполнение программы
+                    }
+
+                    break;          // Выходим из цикла поиска всех цифр за буквой
+
+                }
+            }
+        }
+        else
+        {
             curChar = ncFile.read();            // читаем следующий символ
         }
     }
