@@ -2909,14 +2909,16 @@ void loop() {
   Serial.println("The machine is started.");
   digitalWrite(pinEn, LOW);     // включаем двигатели
   Serial.println("Engines are running.");
-  // инициализируем нулевую точку для устройства вращения заготовки и точку смены инструмента
+  // инициализируем точку смены инструмента
   changeP.changePointX = 129030;
   changeP.changePointY = 0;
-  changeP.changePointZ = 20965;
-  // центр вращения: Y59738 Z35000
+  changeP.changePointZ = 20958;
+  // инициализируем центр вращения:
+  const uint32_t centerRotationY = 59607;
+  const uint32_t centerRotationZ = 34752;
   rPointG54X = widthXAxis - 2000;   // на 5мм левее правого предела оси X
-  rPointG54Y = 59738;               // ровно на оси вращения
-  rPointG54Z = 35000 + 20000;    // на 25мм выше оси вращения (12.7мм ниже верхнего предела)
+  rPointG54Y = centerRotationY;     // ровно на оси вращения
+  rPointG54Z = centerRotationZ + 20000;    // на 25мм выше оси вращения (12.7мм ниже верхнего предела)
   Serial.println("changeP and G54 initialised.");
 
   while (true) {                // основной цикл

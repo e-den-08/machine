@@ -12,8 +12,8 @@ file_name = 'install_1'
 folder_source = 'source/'
 encoding_val = 'cp1251'
 
-bl_compensation_x = 17       # длина компенсации люфта в шагах (проверено микрометром)
-bl_compensation_y = 25
+bl_compensation_x = 8       # длина компенсации люфта в шагах
+bl_compensation_y = 10
 
 mmInStep_100k = 250        # длина шага в миллиметрах (значение умножено в 100.000 раз во избежание дробей)
 
