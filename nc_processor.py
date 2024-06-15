@@ -7,14 +7,14 @@ import os
 import sys                  # модуль необходим для sys.exit в случае если найдено обстоятельство препятствующее
                             # дальнейшей обработке файла
 # инициализация:
-file_name = 'view_4_D6mm'
+file_name = 'head_7'
 
 folder_source = 'source/'
 encoding_val = 'cp1251'
 
-bl_compensation_x = 1       # длина компенсации люфта в шагах
-bl_compensation_y = 2
-z_compensation = 50000      # все координаты по Z поднимаются на данный коэффициент. Связано это с тем, что в данной
+bl_compensation_x = 3       # длина компенсации люфта в шагах
+bl_compensation_y = 4
+z_compensation = 45000      # все координаты по Z поднимаются на данный коэффициент. Связано это с тем, что в данной
 # модификации станка направляющие оси X слегка провисают. Датчик высоты инструмента стоит в самом углу и это самая
 # высокая точка. А когда фреза приходит в центр стола, после поворота детали на 90 градусов, фреза
 # немного зарезает модель. В качестве временной меры пробуем
@@ -357,12 +357,7 @@ for line in gc_list:
             # нашли Z
             if unit.startswith('Z'):
                 z_new = unit_to_int(unit[1:])           # координату Z из текста переводим в число (* 100.000)
-                if z_new > 0:
-                    print(unit)
-                    print(f'z_new                 : {z_new}')
                 z_new += z_compensation
-                if z_new > 0:
-                    print(f'z_new + z_compensation: {z_new}')
                 z_delta = (z_new - z_cur)               # находим длину пути по Z в кадре
                 # print(f'z_cur: {z_cur}')
                 # print(f'z_delta: {z_delta}')
