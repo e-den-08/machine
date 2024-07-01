@@ -142,11 +142,11 @@ char tempNumChar[9];                     // массив для хранения
 uint32_t frameCounter = 0;              // счетчик выполненных к данному моменту кадров. Выводится на компьютер для визуального контроля прогресса обработки
 
 // коды ошибок:
-const uint8_t COMPLETED_SUCCESSFULLY = 0    // выполнено успешно!
-const uint8_t OVER_LOW_LIMIT = 1;       // шпиндель заходит за нижнюю границу по оси Z
-const uint8_t OVER_HIGH_LIMIT = 2;      // шпиндель заходит за верхнюю границу по Z
-const uint8_t TOO_SHORT_TOOL = 7;       // инструмент в шпинделе слишком короткий
-const uint8_t TOO_LONG_TOOL = 8;        // инструмент в шпинделе слишком длинный
+const uint8_t COMPLETED_SUCCESSFULLY = 0;   // выполнено успешно!
+const uint8_t OVER_LOW_LIMIT = 1;           // шпиндель заходит за нижнюю границу по оси Z
+const uint8_t OVER_HIGH_LIMIT = 2;          // шпиндель заходит за верхнюю границу по Z
+const uint8_t TOO_SHORT_TOOL = 7;           // инструмент в шпинделе слишком короткий
+const uint8_t TOO_LONG_TOOL = 8;            // инструмент в шпинделе слишком длинный
 const uint8_t SHOCK_SENSOR_3D_TOUCH = 9;    // датчик 3D Touch Probe столкнулся с препятствием на ускоренном ходу
 const uint8_t GENERAL_ERROR = 255;
 
