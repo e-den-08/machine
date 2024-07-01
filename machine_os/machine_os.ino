@@ -142,6 +142,7 @@ char tempNumChar[9];                     // массив для хранения
 uint32_t frameCounter = 0;              // счетчик выполненных к данному моменту кадров. Выводится на компьютер для визуального контроля прогресса обработки
 
 // коды ошибок:
+const uint8_t COMPLETED_SUCCESSFULLY = 0    // выполнено успешно!
 const uint8_t OVER_LOW_LIMIT = 1;       // шпиндель заходит за нижнюю границу по оси Z
 const uint8_t OVER_HIGH_LIMIT = 2;      // шпиндель заходит за верхнюю границу по Z
 const uint8_t TOO_SHORT_TOOL = 7;       // инструмент в шпинделе слишком короткий
@@ -2228,7 +2229,7 @@ uint8_t read_line_sd()
                     else if (mTempInt == PROGRAM_END)
                     {
                         programInProgress = false;      // программа закончена
-                        return 0;
+                        Serial.println("The program has been completed!");
                     }
 
                     break;          // Выходим из цикла поиска всех цифр за буквой
