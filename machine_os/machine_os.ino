@@ -1982,9 +1982,14 @@ uint8_t read_line_sd()
     char curChar = ncFile.read();   // читаем символ из .ncm файла
 
     while (true) {                  // поштучно читаем символы из файла
-        if (curChar == '\n') {
-            break;                  // заканчиваем читать этот кадр
-        } else if (curChar == 'X') {                // в строке нашли координату X
+        if (curChar == '\n')
+        {
+            // по сути, это условие уже не нужно, оно работало раньше, а сейчас осталось для отладки
+            Serial.println("Data processing error in read_line_sd(): '\n' is not processed");
+            return COMPLETED_SUCCESSFULLY;                  // заканчиваем читать этот кадр
+        }
+        else if (curChar == 'X')
+        {                // в строке нашли координату X
             char xStepsTemp[7];                     // количество шагов в кадре по X (массив char)
             // номер разряда числа, куда будет записан прочитанный символ (в xStepsTemp)
             uint8_t i = 0;
@@ -2010,6 +2015,12 @@ uint8_t read_line_sd()
                         xStepsFrame = -xStepsFrame;
                         minusX = false;             // обнуляем значение флага
                     }
+                    // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                    if (curChar == '\n')
+                    {
+                        return COMPLETED_SUCCESSFULLY;
+                    }
+                    // а если текущий прочитанный символ является дальнейшими данными в строке, тогда просто...
                     break;                          // Выходим из цикла поиска всех цифр за буквой
                 }
             }
@@ -2039,6 +2050,12 @@ uint8_t read_line_sd()
                         yStepsFrame = -yStepsFrame;
                         minusY = false;             // обнуляем значение флага
                     }
+                    // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                    if (curChar == '\n')
+                    {
+                        return COMPLETED_SUCCESSFULLY;
+                    }
+                    // а если текущий прочитанный символ является дальнейшими данными в строке, тогда просто...
                     break;                          // Выходим из цикла поиска всех цифр за буквой
                 }
             }
@@ -2068,6 +2085,12 @@ uint8_t read_line_sd()
                         zStepsFrame = -zStepsFrame;
                         minusZ = false;             // обнуляем значение флага
                     }
+                    // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                    if (curChar == '\n')
+                    {
+                        return COMPLETED_SUCCESSFULLY;
+                    }
+                    // а если текущий прочитанный символ является дальнейшими данными в строке, тогда просто...
                     break;                          // Выходим из цикла поиска всех цифр за буквой
                 }
             }
@@ -2090,7 +2113,15 @@ uint8_t read_line_sd()
                     if (gTempInt == ACCELERATED || gTempInt == AT_FEED) {
                         gSpeed = gTempInt;
                     }
-                    break;                          // Выходим из цикла поиска всех цифр за буквой
+                    // коды типа G должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
+                    // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                    // а пока что временная проверка (в будущем её убрать!)
+                    if (curChar != '\n')
+                    {
+                        Serial.print("error in checking G code! curChar must be '\n', but it is:");
+                        Serial.println(curChar);
+                    }
+                    return COMPLETED_SUCCESSFULLY;
                 }
             }
         } else if (curChar == 'F') {
@@ -2109,7 +2140,15 @@ uint8_t read_line_sd()
                     fTempChar[i] = '\0';
                     fSpeed = atol(fTempChar);       // массив символов переводим в числовой тип
                     speedSetting.setSpeed();          // вычисляем параметры движения для новой скорости
-                    break;                            // Выходим из цикла поиска всех цифр за буквой
+                    // коды типа F должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
+                    // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                    // а пока что временная проверка (в будущем её убрать!)
+                    if (curChar != '\n')
+                    {
+                        Serial.print("error in checking F code! curChar must be '\n', but it is:");
+                        Serial.println(curChar);
+                    }
+                    return COMPLETED_SUCCESSFULLY;
                 }
             }
         } else if (curChar == 'T') {
@@ -2131,14 +2170,14 @@ uint8_t read_line_sd()
                     Serial.print("need to install tool number: ");
                     Serial.println(tTempChar);
                     // проверяем, что шаги не пропускались:
-                    aMove.checkPosition();
+                    // aMove.checkPosition();
                     // Номер инструмента полностью записан.
                     // Переходим к процедуре физической замены инструмента.
                     // Для этого сначала нужно поднять шпиндель в самый верх и
                     // отодвинуть стол, чтобы была возможность достать прежнюю фрезу
                     // и вставить новую.
                     aMove.toRiseSpindle();          // поднимаем шпиндель
-                    aMove.moveAlongTable();         // отодвигаем стол
+                    // aMove.moveAlongTable();         // отодвигаем стол
                     // Теперь можно останавливать шпиндель и менять фрезу.
                     // А пока меняется фреза, ожидаем нажатия кнопок:
                     //   2. все кнопки ручного перемещения по всем осям
@@ -2160,10 +2199,17 @@ uint8_t read_line_sd()
                                     mControl.isOnManual();  // слушаем нажатие кнопок ручного управления
                                 }
                             }
-                            break;
+                            // коды типа T должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
+                            // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                            // а пока что временная проверка (в будущем её убрать!)
+                            if (curChar != '\n')
+                            {
+                                Serial.print("error in checking T code! curChar must be '\n', but it is:");
+                                Serial.println(curChar);
+                            }
+                            return COMPLETED_SUCCESSFULLY;
                         }
                     }
-                    break;                            // Выходим из цикла поиска всех цифр за буквой
                 }
             }
         }
@@ -2214,26 +2260,57 @@ uint8_t read_line_sd()
                         aMove.lowerASpacerHeight();
                         fSpeed = fSpeedTemp;            // возвращаем  скорость подачи G1
                         speedSetting.setSpeed();        // вычисляем параметры движения для новой скорости
+                        // коды типа M должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
+                        // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                        // а пока что временная проверка (в будущем её убрать!)
+                        if (curChar != '\n')
+                        {
+                            Serial.print("error in checking M0 code! curChar must be '\n', but it is:");
+                            Serial.println(curChar);
+                        }
+                        return COMPLETED_SUCCESSFULLY;
                     }
                     else if (mTempInt == SPINDLE_START)
                     {
                         digitalWrite(spindleControl, HIGH);
                         Serial.println("Spindle started");
                         delay(5000);
+                        // коды типа M должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
+                        // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                        // а пока что временная проверка (в будущем её убрать!)
+                        if (curChar != '\n')
+                        {
+                            Serial.print("error in checking M3 code! curChar must be '\n', but it is:");
+                            Serial.println(curChar);
+                        }
+                        return COMPLETED_SUCCESSFULLY;
                     }
                     else if (mTempInt == SPINDLE_STOP)
                     {
                         digitalWrite(spindleControl, LOW);
                         Serial.println("Spindle is stopped");
+                        // коды типа M должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
+                        // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                        // а пока что временная проверка (в будущем её убрать!)
+                        if (curChar != '\n')
+                        {
+                            Serial.print("error in checking M5 code! curChar must be '\n', but it is:");
+                            Serial.println(curChar);
+                        }
+                        return COMPLETED_SUCCESSFULLY;
                     }
                     else if (mTempInt == PROGRAM_END)
                     {
                         programInProgress = false;      // программа закончена
                         Serial.println("The program has been completed!");
+                        return COMPLETED_SUCCESSFULLY;
                     }
-
-                    break;          // Выходим из цикла поиска всех цифр за буквой
-
+                    else
+                    {
+                        // попался неизвестный или ошибочный M код
+                        Serial.print("Unknown or erroneous M-code: ");
+                        Serial.println(mTempInt);
+                    }
                 }
             }
         }
@@ -2260,13 +2337,22 @@ uint8_t read_line_sd()
                     textComment[i] = curChar;   // записываем закрывающую скобку в массив вывода
                     textComment[++i] = '\0';
                     Serial.println(textComment);
-                    break;      // выходим из цикла посимвольного чтения комментария
+                    // а теперь рассмотрим ситуацию, что длина комментария больше 70 символов или, комментарий
+                    // закончился закрывающей скобкой - следовательно, символ новой строки '\n' еще не прочитан.
+                    // дальнейший код для этих двух ситуаций:
+                    // просто читаем файл до появления символа '\n', потому что за этим символом будут дальнейшие данные
+                    while (curChar != '\n')
+                    {
+                        curChar = ncFile.read();    // читаем следующий символ из файла
+                    }
+                    // теперь достигнут конец строки и мы можем спокойно закончить метод read_line_sd()
+                    return COMPLETED_SUCCESSFULLY;
                 }
             }
         }
-        else    // в curChar какой-ти символ, обработчик которого не записан
-        {       // по сути мы его просто пропускаем и читаем следующий символ
-            curChar = ncFile.read();            // читаем следующий символ
+        else    // в curChar какой-то символ, обработчик которого не записан
+        {
+            Serial.println("Error! Unknown character encountered while reading file in read_line_sd()");
         }
     }
 }
