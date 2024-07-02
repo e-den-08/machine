@@ -186,7 +186,7 @@ const int AT_FEED       = 1;
 const uint8_t PROGRAMMABLE_STOP = 0;        // M0 программируемый останов во время выполнения программы
 const uint8_t SPINDLE_START     = 3;        // управление шпинделем
 const uint8_t SPINDLE_STOP      = 5;
-const bool    PROGRAM_END       = 2;        // код М2 конец программы
+const uint8_t PROGRAM_END       = 2;        // код М2 конец программы
 
 // описываем классы:
 
