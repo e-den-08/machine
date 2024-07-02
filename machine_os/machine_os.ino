@@ -162,6 +162,15 @@ const uint8_t SEVEN = 55;
 const uint8_t EIGHT = 56;
 const uint8_t NINE  = 57;
 
+// перевод каретки и новая строка
+const uint8_t CARRIAGE_RETURN = 13;         // ASCII символ перевода каретки
+const uint8_t LINE_FEED       = 10;         // ASCII символ новой строки
+/*
+Windows:    CR+LF
+Unix/Linux: LF
+MacOS:      CR
+*/
+
 
 // константы направления движения для автоматических перемещений
 const char A_RIGHT      = 'r';
@@ -1664,7 +1673,6 @@ class ToolChangePoint {
     // дальше просто эта функция завершается и .ncm программа продолжается как обычно
   uint8_t continueProgram() {
     aMove.toRiseSpindle();        // поднимаем шпиндель
-    aMove.moveAlongTable();        // отодвигаем стол
     aMove.moveXToolChange(changePointX);    // двигаем шпиндель по X до точки смены инструмента
     // опускаем шпиндель до касания датчика инструмента
     if (aMove.moveDownUntilTouchSensor()) {
@@ -1982,11 +1990,16 @@ uint8_t read_line_sd()
     char curChar = ncFile.read();   // читаем символ из .ncm файла
 
     while (true) {                  // поштучно читаем символы из файла
-        if (curChar == '\n')
+        if (curChar == CARRIAGE_RETURN)
         {
             // по сути, это условие уже не нужно, оно работало раньше, а сейчас осталось для отладки
-            Serial.println("Data processing error in read_line_sd(): '\n' is not processed");
-            return COMPLETED_SUCCESSFULLY;                  // заканчиваем читать этот кадр
+            Serial.println("Data processing error in read_line_sd(): CARRIAGE_RETURN is not processed");
+            // заодно еще читаем LINE_FEED
+            curChar = ncFile.read();
+            // теперь читаем символ, следующий за LINE_FEED
+            curChar = ncFile.read();
+            // и переходим на следующую итерацию
+            continue;
         }
         else if (curChar == 'X')
         {                // в строке нашли координату X
@@ -2016,8 +2029,11 @@ uint8_t read_line_sd()
                         minusX = false;             // обнуляем значение флага
                     }
                     // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
-                    if (curChar == '\n')
+                    if (curChar == CARRIAGE_RETURN)
                     {
+                        // заодно еще читаем LINE_FEED
+                        curChar = ncFile.read();
+                        // завершаем работу функции read_line_sd
                         return COMPLETED_SUCCESSFULLY;
                     }
                     // а если текущий прочитанный символ является дальнейшими данными в строке, тогда просто...
@@ -2051,8 +2067,11 @@ uint8_t read_line_sd()
                         minusY = false;             // обнуляем значение флага
                     }
                     // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
-                    if (curChar == '\n')
+                    if (curChar == CARRIAGE_RETURN)
                     {
+                        // заодно еще читаем LINE_FEED
+                        curChar = ncFile.read();
+                        // завершаем работу функции read_line_sd
                         return COMPLETED_SUCCESSFULLY;
                     }
                     // а если текущий прочитанный символ является дальнейшими данными в строке, тогда просто...
@@ -2086,8 +2105,11 @@ uint8_t read_line_sd()
                         minusZ = false;             // обнуляем значение флага
                     }
                     // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
-                    if (curChar == '\n')
+                    if (curChar == CARRIAGE_RETURN)
                     {
+                        // заодно еще читаем LINE_FEED
+                        curChar = ncFile.read();
+                        // завершаем работу функции read_line_sd
                         return COMPLETED_SUCCESSFULLY;
                     }
                     // а если текущий прочитанный символ является дальнейшими данными в строке, тогда просто...
@@ -2114,14 +2136,21 @@ uint8_t read_line_sd()
                         gSpeed = gTempInt;
                     }
                     // коды типа G должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
-                    // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                    // данный момент должен быть CARRIAGE_RETURN и мы просто сразу заканчиваем метод read_line_sd()
                     // а пока что временная проверка (в будущем её убрать!)
-                    if (curChar != '\n')
+                    if (curChar != CARRIAGE_RETURN)
                     {
-                        Serial.print("error in checking G code! curChar must be '\n', but it is:");
+                        Serial.print("error in checking G code! curChar must be CARRIAGE_RETURN, but it is:");
                         Serial.println(curChar);
                     }
-                    return COMPLETED_SUCCESSFULLY;
+                    // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                    if (curChar == CARRIAGE_RETURN)
+                    {
+                        // заодно еще читаем LINE_FEED
+                        curChar = ncFile.read();
+                        // завершаем работу функции read_line_sd
+                        return COMPLETED_SUCCESSFULLY;
+                    }
                 }
             }
         } else if (curChar == 'F') {
@@ -2141,31 +2170,44 @@ uint8_t read_line_sd()
                     fSpeed = atol(fTempChar);       // массив символов переводим в числовой тип
                     speedSetting.setSpeed();          // вычисляем параметры движения для новой скорости
                     // коды типа F должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
-                    // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                    // данный момент должен быть CARRIAGE_RETURN и мы просто сразу заканчиваем метод read_line_sd()
                     // а пока что временная проверка (в будущем её убрать!)
-                    if (curChar != '\n')
+                    if (curChar != CARRIAGE_RETURN)
                     {
-                        Serial.print("error in checking F code! curChar must be '\n', but it is:");
+                        Serial.print("error in checking F code! curChar must be CARRIAGE_RETURN, but it is:");
                         Serial.println(curChar);
                     }
-                    return COMPLETED_SUCCESSFULLY;
+                    // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                    if (curChar == CARRIAGE_RETURN)
+                    {
+                        // заодно еще читаем LINE_FEED
+                        curChar = ncFile.read();
+                        // завершаем работу функции read_line_sd
+                        return COMPLETED_SUCCESSFULLY;
+                    }
                 }
             }
-        } else if (curChar == 'T') {
+        }
+        else if (curChar == 'T')
+        {
             char tTempChar[4];
             tTempChar[0] = '_';
             tTempChar[1] = '_';
             tTempChar[2] = '_';
             tTempChar[3] = '\0';
             uint8_t i = 0;
-            while (true) {
+            while (true)
+            {
                 curChar = ncFile.read();            // читаем следующий символ
                 // если прочитанный символ число:
-                if (curChar >= ZERO && curChar <= NINE) {
+                if (curChar >= ZERO && curChar <= NINE)
+                {
                     tTempChar[i] = curChar;
                     i++;                            // увеличиваем разряд для следующей цифры
                     continue;                       // переходим к чтению следующего символа в .ncm файле
-                } else {
+                }
+                else
+                {
                     // выводим в порт номер инструмента, какой сейчас нужен
                     Serial.print("need to install tool number: ");
                     Serial.println(tTempChar);
@@ -2177,38 +2219,49 @@ uint8_t read_line_sd()
                     // отодвинуть стол, чтобы была возможность достать прежнюю фрезу
                     // и вставить новую.
                     aMove.toRiseSpindle();          // поднимаем шпиндель
-                    // aMove.moveAlongTable();         // отодвигаем стол
                     // Теперь можно останавливать шпиндель и менять фрезу.
                     // А пока меняется фреза, ожидаем нажатия кнопок:
                     //   2. все кнопки ручного перемещения по всем осям
                     //   3. кнопка начать движение к точке смены инструмента
                     //   4. перейти к референтной точке
-                    while (true) {
+                    while (true)
+                    {
                         // 2. проверяем нажата ли одна из кнопок ручного перемещения
                         mControl.isOnManual();
                         // 4. продолжаем программу после физической замены инструмента
-                        if (digitalRead(pinAutoSetTool)) {
+                        if (digitalRead(pinAutoSetTool))
+                        {
                             // продолжаем попытки установить инструмент, пока код выполнения больше нуля.
                             // когда changeP.continueProgram() вернет код выполнения 0, продолжаем программу
-                            while (changeP.continueProgram()) {
+                            while (changeP.continueProgram())
+                            {
                                 // поднимаем шпиндель в самый верх для установки подходящего инструмента
                                 aMove.toRiseSpindle();
-                                while (!digitalRead(pinAutoSetTool)) {
+                                while (!digitalRead(pinAutoSetTool))
+                                {
                                     // ждем нажатия кнопки Continue prograм после замены инструмента
                                     // неподходящего по длине на подходящий по длине
                                     mControl.isOnManual();  // слушаем нажатие кнопок ручного управления
                                 }
                             }
-                            // коды типа T должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
-                            // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
-                            // а пока что временная проверка (в будущем её убрать!)
-                            if (curChar != '\n')
-                            {
-                                Serial.print("error in checking T code! curChar must be '\n', but it is:");
-                                Serial.println(curChar);
-                            }
-                            return COMPLETED_SUCCESSFULLY;
+                            break;
                         }
+                    }
+                    // коды типа T должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
+                    // данный момент должен быть CARRIAGE_RETURN и мы просто сразу заканчиваем метод read_line_sd()
+                    // а пока что временная проверка (в будущем её убрать!)
+                    if (curChar != CARRIAGE_RETURN)
+                    {
+                        Serial.print("error in checking T code! curChar must be CARRIAGE_RETURN, but it is:");
+                        Serial.println(curChar);
+                    }
+                    // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                    if (curChar == CARRIAGE_RETURN)
+                    {
+                        // заодно еще читаем LINE_FEED
+                        curChar = ncFile.read();
+                        // завершаем работу функции read_line_sd
+                        return COMPLETED_SUCCESSFULLY;
                     }
                 }
             }
@@ -2261,14 +2314,21 @@ uint8_t read_line_sd()
                         fSpeed = fSpeedTemp;            // возвращаем  скорость подачи G1
                         speedSetting.setSpeed();        // вычисляем параметры движения для новой скорости
                         // коды типа M должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
-                        // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                        // данный момент должен быть CARRIAGE_RETURN и мы просто сразу заканчиваем метод read_line_sd()
                         // а пока что временная проверка (в будущем её убрать!)
-                        if (curChar != '\n')
+                        if (curChar != CARRIAGE_RETURN)
                         {
-                            Serial.print("error in checking M0 code! curChar must be '\n', but it is:");
+                            Serial.print("error in checking M code! curChar must be CARRIAGE_RETURN, but it is:");
                             Serial.println(curChar);
                         }
-                        return COMPLETED_SUCCESSFULLY;
+                        // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                        if (curChar == CARRIAGE_RETURN)
+                        {
+                            // заодно еще читаем LINE_FEED
+                            curChar = ncFile.read();
+                            // завершаем работу функции read_line_sd
+                            return COMPLETED_SUCCESSFULLY;
+                        }
                     }
                     else if (mTempInt == SPINDLE_START)
                     {
@@ -2276,28 +2336,42 @@ uint8_t read_line_sd()
                         Serial.println("Spindle started");
                         delay(5000);
                         // коды типа M должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
-                        // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                        // данный момент должен быть CARRIAGE_RETURN и мы просто сразу заканчиваем метод read_line_sd()
                         // а пока что временная проверка (в будущем её убрать!)
-                        if (curChar != '\n')
+                        if (curChar != CARRIAGE_RETURN)
                         {
-                            Serial.print("error in checking M3 code! curChar must be '\n', but it is:");
+                            Serial.print("error in checking M code! curChar must be CARRIAGE_RETURN, but it is:");
                             Serial.println(curChar);
                         }
-                        return COMPLETED_SUCCESSFULLY;
+                        // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                        if (curChar == CARRIAGE_RETURN)
+                        {
+                            // заодно еще читаем LINE_FEED
+                            curChar = ncFile.read();
+                            // завершаем работу функции read_line_sd
+                            return COMPLETED_SUCCESSFULLY;
+                        }
                     }
                     else if (mTempInt == SPINDLE_STOP)
                     {
                         digitalWrite(spindleControl, LOW);
                         Serial.println("Spindle is stopped");
                         // коды типа M должны быть по одному в строке .ncm файла, поэтому предполагается, что curChar в
-                        // данный момент должен быть '\n' и мы просто сразу заканчиваем метод read_line_sd()
+                        // данный момент должен быть CARRIAGE_RETURN и мы просто сразу заканчиваем метод read_line_sd()
                         // а пока что временная проверка (в будущем её убрать!)
-                        if (curChar != '\n')
+                        if (curChar != CARRIAGE_RETURN)
                         {
-                            Serial.print("error in checking M5 code! curChar must be '\n', but it is:");
+                            Serial.print("error in checking M code! curChar must be CARRIAGE_RETURN, but it is:");
                             Serial.println(curChar);
                         }
-                        return COMPLETED_SUCCESSFULLY;
+                        // если текущий прочитанный символ это конец строки, заканчиваем метод read_line_sd()
+                        if (curChar == CARRIAGE_RETURN)
+                        {
+                            // заодно еще читаем LINE_FEED
+                            curChar = ncFile.read();
+                            // завершаем работу функции read_line_sd
+                            return COMPLETED_SUCCESSFULLY;
+                        }
                     }
                     else if (mTempInt == PROGRAM_END)
                     {
@@ -2326,7 +2400,7 @@ uint8_t read_line_sd()
                 // В случае, если закрывающую скобку забыли поставить, конец строки - тоже сигнал
                 // для окончания вывода в порт
                 // строка ограничена длиной 70 символов
-                if (curChar != ')' && curChar != '\n' && i < 68)
+                if (curChar != ')' && curChar != CARRIAGE_RETURN && i < 68)
                 {
                     textComment[i] = curChar;
                     i++;        // переводим указатель позиции массива textComment на следующую ячейку
@@ -2338,13 +2412,16 @@ uint8_t read_line_sd()
                     textComment[++i] = '\0';
                     Serial.println(textComment);
                     // а теперь рассмотрим ситуацию, что длина комментария больше 70 символов или, комментарий
-                    // закончился закрывающей скобкой - следовательно, символ новой строки '\n' еще не прочитан.
+                    // закончился закрывающей скобкой - следовательно, CARRIAGE_RETURN и LINE_FEED еще не прочитаны.
                     // дальнейший код для этих двух ситуаций:
-                    // просто читаем файл до появления символа '\n', потому что за этим символом будут дальнейшие данные
-                    while (curChar != '\n')
+                    // просто читаем файл до появления символа CARRIAGE_RETURN, потому что
+                    // за этим символом будут дальнейшие данные
+                    while (curChar != CARRIAGE_RETURN)
                     {
                         curChar = ncFile.read();    // читаем следующий символ из файла
                     }
+                    // CARRIAGE_RETURN прочитан, теперь еще надо прочитать LINE_FEED
+                    curChar = ncFile.read();        // читаем LINE_FEED
                     // теперь достигнут конец строки и мы можем спокойно закончить метод read_line_sd()
                     return COMPLETED_SUCCESSFULLY;
                 }
@@ -2353,6 +2430,8 @@ uint8_t read_line_sd()
         else    // в curChar какой-то символ, обработчик которого не записан
         {
             Serial.println("Error! Unknown character encountered while reading file in read_line_sd()");
+            // заканчиваем работу функции read_line_sd()
+            return 0;
         }
     }
 }
