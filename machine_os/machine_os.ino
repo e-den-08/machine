@@ -3144,6 +3144,18 @@ void loop() {
   digitalWrite(pinEn, LOW);     // включаем двигатели
   Serial.println("Engines are running.");
 
+  // инициализируем точку смены инструмента
+  changeP.changePointX = 127040;
+  changeP.changePointY = 0;
+  changeP.changePointZ = 54053;
+  Serial.println("changePoint installed automatically.");
+
+  // инициализируем точку G54
+  rPointG54X = 104713;
+  rPointG54Y = 82274;
+  rPointG54Z = 50751;
+  Serial.println("G54 installed automatically.");
+
   while (true) {                // основной цикл
     mControl.isOnManual();      // проверяем нажата ли одна из кнопок ручного перемещения
     if (digitalRead(pinTuneMachine)) {      // нажат тумблер выхода в ноль координат станка
